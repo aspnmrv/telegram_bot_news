@@ -137,7 +137,12 @@ data/sophie.db
 app/config.json
 model/
 .jpg
-.session
+app/session_name.session
+app/sdf.session
+app/name.session
+app/bot.session
+app/anon.session
+app/*.jpg
 
 
 docker-compose.dev.yml
