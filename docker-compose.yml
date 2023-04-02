@@ -1,0 +1,15 @@
+version: "3"
+
+services:
+  bot_feed:
+    container_name: bot_feed
+    command: python3 app/main.py
+    stdin_open: true # docker run -i
+    tty: true
+    restart: always
+    build:
+      context: "."
+      dockerfile: Dockerfile
+    volumes:
+      - ./data:/data/
+      - ./sessions:/session
