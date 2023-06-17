@@ -1,18 +1,17 @@
 import uuid
 
 from db import get_data_channels_db, update_send_messages_db, \
-    update_user_last_post_db, get_user_last_post_db, get_user_keywords_db, insert_messages_score_db
+    update_user_last_post_db, get_user_last_post_db, insert_messages_score_db
 from news import News
 from prepare_data import prepare_data, get_pred_labels, check_keywords
-from tools import match_topics_name, get_estimate_markup, unmatch_topic_name
+from tools import match_topics_name, get_estimate_markup, unmatch_topic_name, model_predict
 from datetime import datetime
 
 
 class Sender:
-    def __init__(self, client, bot, model):
+    def __init__(self, client, bot):
         self.client = client
         self.bot = bot
-        self.model = model
 
     @staticmethod
     async def get_table():
@@ -53,7 +52,7 @@ class Sender:
                 clean_messages = await prepare_data(result["message"])
                 print(clean_messages)
 
-                preds = self.model.predict(clean_messages)
+                preds = await model_predict(clean_messages)
                 print("preds", preds)
                 labels = await get_pred_labels(preds)
                 if result["id"]:
@@ -78,6 +77,7 @@ class Sender:
         """"""
         user_last_messages = await get_user_last_post_db()
         last_msg_users = await self.generate_last_msg_users(user_last_messages)
+        print("last_msg_users", last_msg_users)
 
         form = await self.generate_form(user_channels, user_topics, last_msg_users)
         print(form)

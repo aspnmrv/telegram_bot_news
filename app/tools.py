@@ -1,13 +1,19 @@
 import pickle
 import os
+import requests
+import config
+import tempfile
 
+from io import BytesIO
 from telethon.tl.custom import Button
 from db_tools import _get_current_user_step
 from globals import TOPICS
 from pathlib import Path
+from typing import List
 
 
 PATH = Path(__file__).parent.resolve() / "data"
+model_predict_path = config.model_predict_path
 
 
 async def read_data(filename):
@@ -86,3 +92,11 @@ async def get_estimate_markup(data):
     ]
 
     return markup
+
+
+async def model_predict(data: List[str]):
+    """"""
+    try:
+        return requests.post(model_predict_path, json={"news": data}).json()
+    except:
+        return "The server is not responding"

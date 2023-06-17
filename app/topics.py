@@ -1,5 +1,6 @@
 from telethon.tl.custom import Button
 from db_tools import _update_user_states
+from tools import model_predict
 
 
 async def get_state_markup(markup, user_id):
@@ -52,10 +53,12 @@ async def get_proposal_topics(topics, states=None):
     return buttons
 
 
-async def get_available_topics(model, messages):
+async def get_available_topics(messages):
     """"""
-    preds = model.predict(messages)
+    print("messages", messages)
+    preds = await model_predict(messages)
+    print("preds", preds)
     result = list()
-    for pred in preds[0]:
+    for pred in preds:
         result.append(pred[0].split("__label__")[1])
     return result

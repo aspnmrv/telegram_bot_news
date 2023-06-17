@@ -11,6 +11,7 @@ from db import get_user_keywords_db
 
 async def prepare_data(messages):
     """"""
+    # nltk.download("stopwords")
     stop = stopwords.words("russian")
     stop = stop + ["в", "который", "под", "по", "на", "при", "о", "к", "также", "это", "такой", "кроме",
                    "ру", "свой", "лента", "каждый", "другой", "свой", "быть", "являться",
@@ -64,6 +65,7 @@ async def prepare_data(messages):
         try:
             return lemmatize(tokenize(remove_emoji(clean_html(clean_text(str(sent))))))
         except:
+            print("except")
             return ''
 
     for message in messages:
@@ -75,7 +77,7 @@ async def prepare_data(messages):
 async def get_pred_labels(preds):
     """"""
     labels = list()
-    for pred in preds[0]:
+    for pred in preds:
         labels.append(pred[0].split("__label__")[1])
     return labels
 

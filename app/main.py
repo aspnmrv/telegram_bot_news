@@ -1,4 +1,3 @@
-import fasttext
 import re
 import time
 import fnmatch
@@ -13,7 +12,6 @@ from globals import TOPICS
 from tools import read_data, save_data, \
     is_expected_steps, get_keyboard, match_topics_name, remove_file
 from db_tools import _update_current_user_step, _update_user_states, _get_user_states, _get_current_user_step, _truncate_table, _create_db
-# from news import get_posts, get_news, get_channel_info
 from prepare_data import prepare_data
 from topics import get_state_markup, update_text_from_state_markup, build_markup, get_proposal_topics, get_available_topics
 from pathlib import Path
@@ -25,16 +23,22 @@ api_hash = config.api_hash
 bot_token = config.bot_token
 PASS = config.password
 login = config.login
-model_name = config.model_name
-
-
-MODEL_PATH = Path(__file__).parent.resolve() / "model" / model_name
-# DB_PATH = Path(__file__).parent.resolve() / "data" / "sophie_test8.db"
 
 PATH = Path(__file__).parent.resolve() / "data"
 
+import nltk
+import ssl
 
-model = fasttext.load_model(f"{MODEL_PATH}")
+try:
+    _create_unverified_https_context = ssl._create_unverified_context
+except AttributeError:
+    pass
+else:
+    ssl._create_default_https_context = _create_unverified_https_context
+
+nltk.download("stopwords")
+nltk.download("punkt")
+
 
 bot = TelegramClient("bot", api_id, api_hash).start(bot_token=bot_token)
 
@@ -62,24 +66,24 @@ if not client.is_user_authorized():
 print(client.is_user_authorized())
 
 
-@bot.on(events.NewMessage(pattern="/(?i)admin"))
+@bot.on(events.NewMessage(pattern="/admin"))
 async def admin(event):
     user_id = event.message.peer_id.user_id
     user_topics = await get_user_topics_db(user_id)
-    sender = Sender(client, bot, model)
+    sender = Sender(client, bot)
     data = await sender.get_table()
-    print("data", data)
     await sender.form_sender(data, user_topics)
     return
 
 
-@bot.on(events.NewMessage(pattern="/(?i)start"))
+@bot.on(events.NewMessage(pattern="/start"))
 async def start(event):
     await _create_db()
     try:
         await _get_current_user_step(event.message.peer_id.user_id)
     except:
         print("wow")
+    print("event", event)
     sender_info = await event.get_sender()
     user_id = event.message.peer_id.user_id
     if not await is_user_exist_db(user_id):
@@ -184,7 +188,7 @@ async def get_end(event):
 
         clean_messages = await prepare_data(dfs)
 
-        all_topics = await get_available_topics(model, clean_messages)
+        all_topics = await get_available_topics(clean_messages)
         proposal_topics = list(sorted(set(all_topics)))
         total_topics = list(TOPICS.keys())
         best_topics = set.intersection(set(total_topics), set(proposal_topics))
@@ -233,6 +237,9 @@ async def forwards_message(event):
             current_step = await _get_current_user_step(user_id)
             forward_channel_id = int(str("100") + str(event.message.fwd_from.from_id.channel_id)) * -1
             channel_info = await News.get_channel_info(forward_channel_id)
+            if not channel_info["ok"]:
+                time.sleep(2)
+                channel_info = await News.get_channel_info(forward_channel_id)
             print(channel_info)
             username_forward_channel = channel_info["result"]["username"]
             user_channels = await get_user_channels_db(user_id)
@@ -292,12 +299,17 @@ async def get_done(event):
             pass
 
         if await is_expected_steps(user_id, [3]):
-            text = "Отличный выбор! \nМогу исключить из отправок публикации, " \
-                   "содержащие выбранные тобой ключевые слова. Вдруг новости про футбол или " \
-                   "очередной вирус уже надоели :) Продолжим?"
-            keyboard = get_keyboard(["Добавить", "Не нужно", "Назад"])
-            await _update_current_user_step(user_id, 4)
-            await event.client.send_message(event.chat_id, text, buttons=keyboard)
+            user_cur_topics = await _get_user_states(user_id, "topics")
+            if len(user_cur_topics) != 0:
+                text = "Отличный выбор! \nМогу исключить из отправок публикации, " \
+                       "содержащие выбранные тобой ключевые слова. Вдруг новости про футбол или " \
+                       "очередной вирус уже надоели :) Продолжим?"
+                keyboard = get_keyboard(["Добавить", "Не нужно", "Назад"])
+                await _update_current_user_step(user_id, 4)
+                await event.client.send_message(event.chat_id, text, buttons=keyboard)
+            else:
+                await event.client.send_message(event.chat_id, "Нужно что-то выбрать!", buttons=get_keyboard(["Готово"]))
+                await get_end(event)
         else:
             text = "Отличный выбор!"
             keyboard = get_keyboard(["Запустить"])
@@ -351,7 +363,6 @@ async def filter_keywords(event):
         return False
 
 
-#pattern=r'[^,]+(,[^,]+)+'
 @bot.on(events.NewMessage(pattern=r'[^,]+(,[^,]+)+', forwards=False))
 async def create_keywords(event):
     """"""
@@ -396,6 +407,7 @@ async def create_keywords(event):
 async def get_dont_keywords(event):
     """"""
     user_id = event.message.peer_id.user_id
+    await remove_from_db("user_keywords", user_id)
 
     if await is_expected_steps(user_id, [4, 6]):
         await _update_current_user_step(user_id, 5)
@@ -551,7 +563,7 @@ async def get_back(event):
 # / commands
 
 
-@bot.on(events.NewMessage(pattern="/(?i)keywords"))
+@bot.on(events.NewMessage(pattern="/keywords"))
 async def change_keywords(event):
     user_id = event.message.peer_id.user_id
     await _update_current_user_step(user_id, 7)
@@ -568,7 +580,7 @@ async def change_keywords(event):
     return
 
 
-@bot.on(events.NewMessage(pattern="/(?i)interests"))
+@bot.on(events.NewMessage(pattern="/interests"))
 async def change_topics(event):
     user_id = event.message.peer_id.user_id
     if not await is_exist_temp_db("user_topics", user_id):
@@ -580,7 +592,7 @@ async def change_topics(event):
     return
 
 
-@bot.on(events.NewMessage(pattern="/(?i)channels"))
+@bot.on(events.NewMessage(pattern="/channels"))
 async def change_channels(event):
     user_id = event.message.peer_id.user_id
     await _update_current_user_step(user_id, 9)
@@ -599,7 +611,7 @@ async def change_channels(event):
     return
 
 
-@bot.on(events.NewMessage(pattern="/(?i)help"))
+@bot.on(events.NewMessage(pattern="/help"))
 async def change_channels(event):
     print(event)
     user_id = event.message.peer_id.user_id
