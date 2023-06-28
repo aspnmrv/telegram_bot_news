@@ -18,14 +18,15 @@ model_predict_path = config.model_predict_path
 
 async def read_data(filename):
     """"""
-    with open(PATH / filename, "rb") as f:
+    with open("/data/" + filename, "rb") as f:
         data = pickle.load(f)
     return data
 
 
 async def save_data(data, suffix=""):
     """"""
-    with open(PATH / f"data_{suffix}.pkl", "wb") as f:
+    print(PATH)
+    with open("/data/" + f"data_{suffix}.pkl", "wb") as f:
         pickle.dump(data, f)
     return
 
