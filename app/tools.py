@@ -19,6 +19,7 @@ model_predict_path = config.model_predict_path
 async def read_data(filename):
     """"""
     with open("/data/" + filename, "rb") as f:
+        print(filename)
         data = pickle.load(f)
     return data
 
@@ -26,6 +27,7 @@ async def read_data(filename):
 async def save_data(data, suffix=""):
     """"""
     print(PATH)
+    print("kkk")
     with open("/data/" + f"data_{suffix}.pkl", "wb") as f:
         pickle.dump(data, f)
     return
@@ -98,6 +100,6 @@ async def get_estimate_markup(data):
 async def model_predict(data: List[str]):
     """"""
     try:
-        return requests.post(model_predict_path, json={"news": data}).json()
-    except:
-        return "The server is not responding"
+        return requests.post(model_predict_path, json={"news": data}, headers={"Connection":"close"}).json()
+    except Exception as e:
+        return f"The server is not responding\n{e}"
