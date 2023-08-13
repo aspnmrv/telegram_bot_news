@@ -1,3 +1,8 @@
+import sys
+import os
+
+sys.path.insert(1, os.path.realpath(os.path.pardir))
+
 import requests
 import time
 import config

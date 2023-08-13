@@ -1,3 +1,8 @@
+import sys
+import os
+
+sys.path.insert(1, os.path.realpath(os.path.pardir))
+
 from telethon.tl.custom import Button
 from app.db.db_tools import _update_user_states
 from app.tools.tools import model_predict

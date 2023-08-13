@@ -1,3 +1,8 @@
+import sys
+import os
+
+sys.path.insert(1, os.path.realpath(os.path.pardir))
+
 import uuid
 import re
 

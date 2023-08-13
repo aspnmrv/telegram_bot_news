@@ -1,3 +1,8 @@
+import sys
+import os
+
+sys.path.insert(1, os.path.realpath(os.path.pardir))
+
 import pymorphy2
 import re
 import nltk
