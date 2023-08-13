@@ -1,6 +1,6 @@
 from telethon.tl.custom import Button
-from db_tools import _update_user_states
-from tools import model_predict
+from app.db.db_tools import _update_user_states
+from app.tools.tools import model_predict
 
 
 async def get_state_markup(markup, user_id):
@@ -19,16 +19,13 @@ async def get_state_markup(markup, user_id):
 async def update_text_from_state_markup(markup, state, topics, name):
     """"""
     for elem in range(len(state)):
-        print("elem", elem)
         if topics[elem] == name:
-            print("topics[elem]", topics[elem], "name", name)
             if "✅" not in markup.rows[elem].buttons[0].text:
                 markup.rows[elem].buttons[0].text += " ✅"
             else:
                 markup.rows[elem].buttons[0].text = markup.rows[elem].buttons[0].text.split("✅")[0]
         else:
             markup.rows[elem].buttons[0].text = markup.rows[elem].buttons[0].text
-    print("itog markup", markup)
     return markup
 
 
@@ -55,9 +52,8 @@ async def get_proposal_topics(topics, states=None):
 
 async def get_available_topics(messages):
     """"""
-    print("messages", messages)
     preds = await model_predict(messages)
-    print("preds", preds)
+
     result = list()
     for pred in preds:
         result.append(pred[0].split("__label__")[1])

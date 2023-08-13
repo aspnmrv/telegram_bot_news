@@ -4,7 +4,7 @@ import os
 import pandas.io.sql as sqlio
 
 from psycopg2 import pool
-from globals import MINCONN, MAXCONN
+from app.globals import MINCONN, MAXCONN
 from datetime import datetime
 
 
@@ -158,8 +158,8 @@ async def update_user_keywords_db(user_id, keywords) -> None:
         WHERE user_id = {user_id}
     """
     cur.execute(query)
-    df = cur.fetchall()
-    if df:
+    data = cur.fetchall()
+    if data:
         query = f"""
             UPDATE public.user_keywords
             SET keywords = ARRAY{keywords}
@@ -208,11 +208,6 @@ async def update_user_channels_db(user_id, channel) -> None:
     cur.execute(query)
     df = cur.fetchall()
     if df:
-        # query = f"""
-        #     UPDATE public.user_channels
-        #     SET channel = '{channel}'
-        #     WHERE user_id = {user_id}
-        # """
         created_at = datetime.now()
         query = f"""
             INSERT INTO public.user_channels (user_id, created_at, channel)
@@ -250,27 +245,24 @@ async def get_user_channels_db(user_id):
         return []
 
 
-async def get_data_channels_db():
+async def get_data_channels_db(user_id):
     """"""
     conn = GLOBAL_POOL.getconn()
+    cur = conn.cursor()
     query = f"""
         SELECT
-            user_id,
             array_agg(distinct channel) as channels
         FROM public.user_channels
+        WHERE user_id = {user_id}
         GROUP BY user_id
     """
-    data = sqlio.read_sql_query(query, conn)
+    cur.execute(query)
+    data = cur.fetchall()
     GLOBAL_POOL.putconn(conn)
-    if data.shape[0] > 0:
-        users = data["user_id"]
-        channels = data["channels"]
-        result = dict()
-        for user, channel in zip(users, channels):
-            result[user] = channel
-        return result
+    if data:
+        return data[0][0]
     else:
-        return dict()
+        return []
 
 
 async def update_data_events_db(user_id, event, params) -> None:
@@ -336,6 +328,7 @@ async def update_user_last_post_db(user_id, data):
     """"""
     conn = GLOBAL_POOL.getconn()
     cur = conn.cursor()
+    created_at = datetime.now()
     query = f"""
         SELECT
             user_id
@@ -347,13 +340,14 @@ async def update_user_last_post_db(user_id, data):
     if df:
         query = f"""
              UPDATE public.user_last_post
-             SET data = '{json.dumps(data)}'
+             SET data = '{json.dumps(data)}',
+             updated_at = '{created_at}'
              WHERE user_id = {user_id}
          """
     else:
         query = f"""
-            INSERT INTO public.user_last_post (user_id, data)
-            VALUES ({user_id}, '{json.dumps(data)}')
+            INSERT INTO public.user_last_post (user_id, updated_at, data)
+            VALUES ({user_id}, '{created_at}', '{json.dumps(data)}')
         """
     cur.execute(query)
     conn.commit()
@@ -361,21 +355,21 @@ async def update_user_last_post_db(user_id, data):
     return None
 
 
-async def get_user_last_post_db():
+async def get_user_last_post_db(user_id):
     conn = GLOBAL_POOL.getconn()
     cur = conn.cursor()
     query = f"""
         SELECT
-            user_id,
             data
         FROM user_last_post
+        where user_id = {user_id}
     """
     cur.execute(query)
     data = cur.fetchall()
     conn.commit()
     GLOBAL_POOL.putconn(conn)
 
-    return data
+    return data[0][0] if data else {}
 
 
 async def insert_messages_score_db(uuid, user_id, channel, post_id, topic) -> None:
@@ -406,3 +400,258 @@ async def insert_score_db(uuid, score) -> None:
     conn.commit()
     GLOBAL_POOL.putconn(conn)
     return None
+
+
+async def get_stat_topics_db():
+    """"""
+    conn = GLOBAL_POOL.getconn()
+    cur = conn.cursor()
+    query = f"""
+        SELECT
+            user_id,
+            unnest(topics) as topic
+        FROM public.user_topics
+        GROUP BY user_id
+    """
+    cur.execute(query)
+    data = cur.fetchall()
+    GLOBAL_POOL.putconn(conn)
+    if data:
+        return data
+    else:
+        return -1
+
+
+async def get_stat_keywords_db():
+    """"""
+    conn = GLOBAL_POOL.getconn()
+    cur = conn.cursor()
+    query = f"""
+        SELECT
+            keyword,
+            count(distinct user_id) as users
+        FROM (
+            SELECT
+                user_id,
+                unnest(keywords) as keyword
+            FROM public.user_keywords
+            GROUP BY user_id
+        ) AS subq
+        GROUP BY keyword
+        ORDER BY users DESC
+        LIMIT 8
+    """
+    cur.execute(query)
+    data = cur.fetchall()
+    GLOBAL_POOL.putconn(conn)
+
+    return data
+
+
+async def update_stat_db(user_id, topic_filter_posts, keywords_filter_posts) -> None:
+    """"""
+    conn = GLOBAL_POOL.getconn()
+    cur = conn.cursor()
+    created_at = datetime.now()
+    query = f"""
+        INSERT INTO public.stat_info (user_id, created_at, topics_filter_posts, keywords_filter_posts)
+        VALUES ({user_id}, '{created_at}', {topic_filter_posts}, {keywords_filter_posts})
+    """
+    cur.execute(query)
+    conn.commit()
+    GLOBAL_POOL.putconn(conn)
+    return None
+
+
+async def update_stat_use_db(user_id, is_summary, is_sent) -> None:
+    """"""
+    conn = GLOBAL_POOL.getconn()
+    cur = conn.cursor()
+    created_at = datetime.now()
+    query = f"""
+        INSERT INTO public.stat_uses (user_id, created_at, is_summary, is_sent)
+        VALUES ({user_id}, '{created_at}', {is_summary}, {is_sent})
+    """
+    cur.execute(query)
+    conn.commit()
+    GLOBAL_POOL.putconn(conn)
+    return None
+
+
+async def get_stat_use_db(user_id) -> None:
+    """"""
+    conn = GLOBAL_POOL.getconn()
+    cur = conn.cursor()
+    date = datetime.today().strftime("%Y-%m-%d")
+    query = f"""
+        SELECT
+            count(*) as cnt
+        FROM public.stat_uses
+        WHERE user_id = {user_id}
+            and created_at::date = '{date}'
+    """
+    cur.execute(query)
+    data = cur.fetchall()
+    conn.commit()
+    GLOBAL_POOL.putconn(conn)
+
+    return data[0][0] if data else None
+
+
+async def get_stat_filter_db(user_id) -> None:
+    """"""
+    conn = GLOBAL_POOL.getconn()
+    cur = conn.cursor()
+    query = f"""
+        SELECT
+            sum(topics_filter_posts) as topics_filter_posts,
+            sum(keywords_filter_posts) as keywords_filter_posts
+        FROM public.stat_info
+        WHERE user_id = {user_id}
+            and created_at::date >= (now() - interval '7 day')
+    """
+    cur.execute(query)
+    data = cur.fetchall()
+    conn.commit()
+    GLOBAL_POOL.putconn(conn)
+
+    return data if data else None
+
+
+async def get_stat_popular_db(user_id) -> None:
+    """"""
+    conn = GLOBAL_POOL.getconn()
+    cur = conn.cursor()
+    query = f"""
+        SELECT
+            sum(topics_filter_posts) as topics_filter_posts,
+            sum(keywords_filter_posts) as keywords_filter_posts
+        FROM public.stat_uses
+        WHERE user_id = {user_id}
+            and created_at::date >= (now() - interval '7 day')
+    """
+    cur.execute(query)
+    data = cur.fetchall()
+    conn.commit()
+    GLOBAL_POOL.putconn(conn)
+
+    return data if data else None
+
+
+async def update_channel_info_db(channel_id, channel_name) -> None:
+    """"""
+    created_at = datetime.now()
+    conn = GLOBAL_POOL.getconn()
+    cur = conn.cursor()
+    query = f"""
+         UPDATE public.channels
+         SET username = '{channel_name}',
+         updated_at = '{created_at}'
+         WHERE channel_id = '{channel_id}'
+     """
+    cur.execute(query)
+    conn.commit()
+    GLOBAL_POOL.putconn(conn)
+    return None
+
+
+async def insert_channel_info_db(channel_id, channel_name) -> None:
+    """"""
+    created_at = datetime.now()
+    conn = GLOBAL_POOL.getconn()
+    cur = conn.cursor()
+    query = f"""
+        INSERT INTO public.channels (channel_id, username, created_at, updated_at)
+        VALUES ('{channel_id}', '{channel_name}', '{created_at}', '{created_at}')
+    """
+    cur.execute(query)
+    conn.commit()
+    GLOBAL_POOL.putconn(conn)
+    return None
+
+
+async def check_channel_info_db(channel_id) -> tuple or bool:
+    """"""
+    conn = GLOBAL_POOL.getconn()
+    cur = conn.cursor()
+    query = f"""
+        SELECT
+            channel_id,
+            username
+        FROM public.channels
+        WHERE channel_id = '{channel_id}'
+    """
+    cur.execute(query)
+    data = cur.fetchall()
+
+    conn.commit()
+    GLOBAL_POOL.putconn(conn)
+    return data if data else False
+
+
+async def insert_channel_entity_db(channel_id, access_hash) -> None:
+    """"""
+    created_at = datetime.now()
+    conn = GLOBAL_POOL.getconn()
+    cur = conn.cursor()
+    query = f"""
+        INSERT INTO public.channels_entity (channel_id, access_hash, created_at, updated_at)
+        VALUES ('{channel_id}', {access_hash}, '{created_at}', '{created_at}')
+    """
+    cur.execute(query)
+    conn.commit()
+    GLOBAL_POOL.putconn(conn)
+    return None
+
+
+async def update_channel_entity_db(channel_id, access_hash) -> None:
+    """"""
+    created_at = datetime.now()
+    conn = GLOBAL_POOL.getconn()
+    cur = conn.cursor()
+    query = f"""
+                 UPDATE public.channels_entity
+                 SET access_hash = {access_hash},
+                 updated_at = '{created_at}'
+                 WHERE channel_id = '{channel_id}'
+             """
+    cur.execute(query)
+    conn.commit()
+    GLOBAL_POOL.putconn(conn)
+    return None
+
+
+async def check_channel_entity_db(channel_id) -> tuple or bool:
+    """"""
+    conn = GLOBAL_POOL.getconn()
+    cur = conn.cursor()
+    query = f"""
+        SELECT
+            access_hash
+        FROM public.channels_entity
+        WHERE channel_id = '{channel_id}'
+    """
+    cur.execute(query)
+    data = cur.fetchall()
+
+    conn.commit()
+    GLOBAL_POOL.putconn(conn)
+    return data if data else False
+
+
+async def get_channel_id_by_name_db(channel_name) -> tuple or bool:
+    """"""
+    conn = GLOBAL_POOL.getconn()
+    cur = conn.cursor()
+    query = f"""
+        SELECT
+            channel_id
+        FROM public.channels
+        WHERE username = '{channel_name}'
+    """
+    cur.execute(query)
+    data = cur.fetchall()
+
+    conn.commit()
+    GLOBAL_POOL.putconn(conn)
+    return data[0][0] if data else False

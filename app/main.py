@@ -1,21 +1,26 @@
 import re
 import time
-import fnmatch
-import config
-from news import News
+import asyncio
 
-from sender import Sender
+
+import config
+from news.news import News
+
+from sender.sender import Sender
 from telethon.tl.custom import Button
 from telethon import TelegramClient, events, sync, functions
+from telethon.tl.types import InputPeerChannel
 from globals import TOPICS
 
-from tools import read_data, save_data, \
-    is_expected_steps, get_keyboard, match_topics_name, remove_file
-from db_tools import _update_current_user_step, _update_user_states, _get_user_states, _get_current_user_step, _truncate_table, _create_db
-from prepare_data import prepare_data
-from topics import get_state_markup, update_text_from_state_markup, build_markup, get_proposal_topics, get_available_topics
+from tools.tools import read_data, \
+    is_expected_steps, get_keyboard, match_topics_name, remove_file, get_bar_plot, \
+    get_stat_interests, get_stat_keywords, send_user_main_stat, send_user_file_stat, get_choose_topics
+from db.db_tools import _update_current_user_step, _update_user_states, _get_user_states, \
+    _get_current_user_step, _truncate_table, _create_db
+from tools.prepare_data import prepare_data
+from topics.topics import get_state_markup, update_text_from_state_markup, build_markup, get_proposal_topics, get_available_topics
 from pathlib import Path
-from db import *
+from db.db import *
 
 
 api_id = config.app_id
@@ -39,7 +44,6 @@ else:
 nltk.download("stopwords")
 nltk.download("punkt")
 
-
 bot = TelegramClient("bot", api_id, api_hash).start(bot_token=bot_token)
 
 session_dir = Path(__file__).parent.parent.resolve()
@@ -60,24 +64,67 @@ if not client.is_user_authorized():
         client.send_code_request(phone=login, force_sms=False)
         print(client)
         try:
-            client.sign_in(login, input('Enter code: '))
+            client.sign_in(login, input("Enter code: "))
         except:
             client.sign_in(password=PASS)
 print(client.is_user_authorized())
 
 
-@bot.on(events.NewMessage(pattern="/admin"))
-async def admin(event):
+@bot.on(events.NewMessage(pattern="/news"))
+async def get_news(event):
     user_id = event.message.peer_id.user_id
-    user_topics = await get_user_topics_db(user_id)
-    sender = Sender(client, bot)
-    data = await sender.get_table()
-    await sender.form_sender(data, user_topics)
+    cnt_uses = await get_stat_use_db(user_id)
+    print("cnt_uses", cnt_uses)
+    if cnt_uses < 10:
+        await event.client.send_message(event.chat_id, "Обрабатываю..Мне потребуется до 3-х минут ☺️",
+                                        buttons=Button.clear())
+        user_topics = await get_user_topics_db(user_id)
+        if user_topics:
+            sender = Sender(client, bot)
+            data = await get_data_channels_db(user_id)
+            print("data", data)
+            await sender.send_aggregate_news(user_id, data, user_topics, False)
+        else:
+            await event.client.send_message(event.chat_id,
+                                            "Добавленных каналов еще нет 🙃\n\n"
+                                            "Изменить список каналов можно "
+                                            "по команде /channels", buttons=Button.clear())
+    else:
+        await event.client.send_message(event.chat_id,
+                                        "Слишком много запросов за сегодня 🤓\n\n"
+                                        "Самое время отвлечься от нововстей!", buttons=Button.clear())
+    return
+
+
+@bot.on(events.NewMessage(pattern="/summary"))
+async def get_summary(event):
+    user_id = event.message.peer_id.user_id
+    cnt_uses = await get_stat_use_db(user_id)
+    print("cnt_uses", cnt_uses)
+    if cnt_uses < 6:
+        await event.client.send_message(event.chat_id, "Обрабатываю..Мне потребуется до 3-х минут ☺️",
+                                        buttons=Button.clear())
+        user_topics = await get_user_topics_db(user_id)
+        if user_topics:
+            sender = Sender(client, bot)
+            data = await get_data_channels_db(user_id)
+            print("data", data)
+            await sender.send_aggregate_news(user_id, data, user_topics, True)
+        else:
+            await event.client.send_message(event.chat_id,
+                                            "Добавленных каналов еще нет 🙃\n\n"
+                                            "Изменить список каналов можно "
+                                            "по команде /channels", buttons=Button.clear())
+    else:
+        await event.client.send_message(event.chat_id,
+                                        "Слишком много запросов за сегодня 🤓\n\n"
+                                        "Самое время отвлечься от нововстей!", buttons=Button.clear())
     return
 
 
 @bot.on(events.NewMessage(pattern="/start"))
 async def start(event):
+    print("event", event)
     await _create_db()
     try:
         await _get_current_user_step(event.message.peer_id.user_id)
@@ -90,33 +137,44 @@ async def start(event):
         await update_data_users_db(sender_info)
     await _update_current_user_step(user_id, 1)
 
-    keyboard = get_keyboard(["Начнем?", "Обо мне"])
-    await event.client.send_message(event.chat_id, "Выбери что-нибудь :)", buttons=keyboard)
+    keyboard = await get_keyboard(["Начать 🚀", "Обо мне"])
+    text = """Привет! 👋\n\nЯ могу помочь фильтровать новостные посты из твоих любимых каналов.\nНачнем?"""
+    await event.client.send_message(event.chat_id, text, buttons=keyboard)
     return
 
 
-@bot.on(events.NewMessage(pattern="Начнем?"))
+# @bot.on(events.NewMessage(pattern="kek"))
+# async def get_kek(event):
+#     await asyncio.sleep(60)
+#     return
+
+
+@bot.on(events.NewMessage(pattern="Начать 🚀"))
 async def get_begin(event):
     user_id = event.message.peer_id.user_id
 
-    if await is_expected_steps(user_id, [3]):
-        keyboard = get_keyboard(["Это все", "Назад"])
+    if await is_expected_steps(user_id, [3, 24]):
+        keyboard = await get_keyboard(["Это все", "Назад"])
         await _update_current_user_step(user_id, 2)
         await event.client.send_message(
             event.chat_id,
-            "Пришли мне по одному репосту из каналов, которые ты хочешь читать",
+            "Присылай мне по одному репосту из каналов, которые ты хочешь читать! Я их запомню и буду "
+            "искать новости там 🕵️.\n\nНо выбери только самые интересные каналы! Пока можно"
+            " добавлять не более 3-х каналов 😇",
             buttons=keyboard
         )
     elif await is_expected_steps(user_id, [1]):
         await _update_current_user_step(user_id, 2)
-        back_button = get_keyboard(["Назад"])
+        back_button = await get_keyboard(["Назад"])
         await event.client.send_message(
             event.sender_id,
-            "Пришли мне по одному репосту из каналов, которые ты хочешь читать",
+            "Присылай мне по одному репосту из каналов, которые ты хочешь читать! Я их запомню и буду "
+            "искать новости там 🕵️.\n\nНо выбери только самые интересные каналы! Пока можно"
+            " добавлять не более 3-х каналов 😇",
             buttons=back_button
         )
     else:
-        await event.client.send_message(event.chat_id, "Нет такого варианта")
+        pass
     return
 
 
@@ -137,8 +195,7 @@ async def handler(event):
 
         await event.client.edit_message(event.sender_id, event.message_id, buttons=markup)
     else:
-        await event.client.edit_message(event.sender_id, event.message_id, "Спасибо)")
-        print(event.data.decode("utf-8"))
+        await event.client.edit_message(event.sender_id, event.message_id, "Спасибо ☺️")
         data = event.data.decode("utf-8")
         uid = data[:-2]
         score = int(data.split("-")[-1])
@@ -153,45 +210,33 @@ async def get_end(event):
     if await is_expected_steps(user_id, [4]):
         await _update_current_user_step(user_id, 3)
         user_cur_states = await _get_user_states(user_id, "states")
+        print("user_cur_states", user_cur_states)
         user_cur_topics = await _get_user_states(user_id, "topics")
+        print("user_cur_topics", user_cur_topics)
         user_cur_topics = await match_topics_name(user_cur_topics)
         markup = bot.build_reply_markup(await get_proposal_topics(user_cur_topics, user_cur_states))
 
         await get_state_markup(markup, user_id)
-        success_button = get_keyboard(["Готово!", "Назад"])
-        await event.client.send_message(event.chat_id, "Выбери интересующие темы", buttons=markup)
-        await event.client.send_message(event.sender_id, "Когда закончишь с выбором, жми готово :)", buttons=success_button)
+        success_button = await get_keyboard(["Готово!", "Назад"])
+        await event.client.send_message(event.chat_id, "Выбери интересующие темы 🐥\n", buttons=markup)
+        await event.client.send_message(event.sender_id, "Когда закончишь с выбором, жми Готово!", buttons=success_button)
     elif await is_expected_steps(user_id, [8]):
         await _update_current_user_step(user_id, 31)
         user_cur_states = await _get_user_states(user_id, "states")
+        print("user_cur_states", user_cur_states)
         user_cur_topics = await _get_user_states(user_id, "topics")
+        print("user_cur_topics", user_cur_topics)
         user_cur_topics = await match_topics_name(user_cur_topics)
         markup = bot.build_reply_markup(await get_proposal_topics(user_cur_topics, user_cur_states))
 
         await get_state_markup(markup, user_id)
-        success_button = get_keyboard(["Готово!"])
-        await event.client.send_message(event.chat_id, "Выбери интересующие темы", buttons=markup)
-        await event.client.send_message(event.sender_id, "Когда закончишь с выбором, жми готово :)",
+        success_button = await get_keyboard(["Готово!"])
+        await event.client.send_message(event.chat_id, "Выбери интересующие темы 🐥\n", buttons=markup)
+        await event.client.send_message(event.sender_id, "Когда закончишь с выбором, жми Готово!",
                                         buttons=success_button)
     elif await is_expected_steps(user_id, [2, 9]):
         await _update_current_user_step(user_id, 3)
-        print(PATH)
-        files = fnmatch.filter(os.listdir(PATH), f'data_{user_id}_*.pkl')
-        print("files", files)
-        dfs = list()
-        for file in files:
-            print(file)
-            data = await read_data(file)
-            dfs += data
-        for file in files:
-            await remove_file(file)
-
-        clean_messages = await prepare_data(dfs)
-
-        all_topics = await get_available_topics(clean_messages)
-        proposal_topics = list(sorted(set(all_topics)))
         total_topics = list(TOPICS.keys())
-        best_topics = set.intersection(set(total_topics), set(proposal_topics))
 
         await _update_user_states(user_id, "topics", total_topics)
         await _update_user_states(user_id, "states", ["" for _ in range(len(total_topics))])
@@ -200,25 +245,20 @@ async def get_end(event):
         markup = bot.build_reply_markup(await get_proposal_topics(proposal_topics))
 
         await get_state_markup(markup, user_id)
-        success_button = get_keyboard(["Готово!", "Назад"])
-        if len(best_topics) == 0:
-            text = "Выбери любые интересующие темы"
-        elif len(total_topics) - len(best_topics) < 3:
-            text = "Выбери любые интересующие темы. Но, кажется, этот набор каналов не похож на новостной"
-        else:
-            text = "Выбери любые интересующие темы. Для этого набора каналов отлично подходят темы:" \
-                   f"{', '.join(list(best_topics))}"
+        success_button = await get_keyboard(["Готово!", "Назад"])
+        text = "Выбери интересующие темы 🐥\n"
         await event.client.send_message(event.chat_id, text, buttons=markup)
-        await event.client.send_message(event.sender_id, "Когда закончишь с выбором, жми готово :)", buttons=success_button)
+        await event.client.send_message(event.sender_id,
+                                        "Когда закончишь с выбором, жми Готово 👇", buttons=success_button)
     else:
-        await event.client.send_message(event.chat_id, "Нет такой команды")
+        pass
     return
 
 
 async def wait_post(event):
     """"""
-    keyboard = get_keyboard(["Это все"])
-    await event.client.send_message(event.chat_id, "Принял. Еще?", buttons=keyboard, parse_mode="html")
+    keyboard = await get_keyboard(["Это все"])
+    await event.client.send_message(event.chat_id, "Принял. Еще?😏", buttons=keyboard, parse_mode="html")
 
     return
 
@@ -227,46 +267,56 @@ async def wait_post(event):
 async def forwards_message(event):
     user_id = event.message.peer_id.user_id
     if await is_expected_steps(user_id, [2, 9]):
-        # if user_id == 1377533848 or await is_expected_steps(user_id, [9]):
-        if await is_expected_steps(user_id, [2, 9]):
+        if await is_expected_steps(user_id, [9]):
             await remove_from_db("user_channels", user_id)
         if event.message.message == "":
-            time.sleep(1)
+            await asyncio.sleep(1)
         else:
             await event.client.send_message(event.chat_id, "Обрабатываю..", buttons=Button.clear())
             current_step = await _get_current_user_step(user_id)
-            forward_channel_id = int(str("100") + str(event.message.fwd_from.from_id.channel_id)) * -1
-            channel_info = await News.get_channel_info(forward_channel_id)
-            if not channel_info["ok"]:
-                time.sleep(2)
+            try:
+                forward_channel_id = int(str("100") + str(event.message.fwd_from.from_id.channel_id)) * -1
                 channel_info = await News.get_channel_info(forward_channel_id)
-            print(channel_info)
-            username_forward_channel = channel_info["result"]["username"]
-            user_channels = await get_user_channels_db(user_id)
-            channels_unique = set(user_channels)
-            if len(channels_unique) == 3:
-                await update_data_events_db(user_id, "forward_error",
-                                         {"step": current_step,
-                                          "channel_id": forward_channel_id, "error": "limit"})
-                text = "Пока нельзя добавлять больше 3-х каналов, но список в любой момент можно изменить по команде"
-                keyboard = get_keyboard(["Это все"])
-                await event.client.send_message(event.chat_id, text, buttons=keyboard)
-            if str(forward_channel_id) in list(channels_unique):
-                await update_data_events_db(user_id, "forward_error",
-                                         {"step": current_step,
-                                          "channel_id": forward_channel_id, "error": "exist"})
-                keyboard = get_keyboard(["Это все"])
-                await event.client.send_message(event.chat_id, "Этот канал уже добавлен", buttons=keyboard)
-            else:
-                await update_data_events_db(user_id, "forward_message",
-                                         {"step": current_step, "channel_id": forward_channel_id})
-                await update_user_channels_db(user_id, str(username_forward_channel))
-                news = News(client=client)
-                posts = await news.get_posts(forward_channel_id, limit=3)
-                result = await news.get_news(posts=posts, num_dozen=1, forward_channel_id=forward_channel_id)
+                if not channel_info:
+                    await asyncio.sleep(2)
+                    channel_info = await News.get_channel_info(forward_channel_id)
+                    username_forward_channel = channel_info
+                else:
+                    username_forward_channel = channel_info
+            except:
+                username_forward_channel = ""
+                forward_channel_id = -1
+                await event.client.send_message(user_id, "Такс, либо это совсем "
+                                                         "не канал, либо канал, но закрытый. "
+                                                         "Попробуем что-то другое? 🙂", buttons=Button.clear())
+            if username_forward_channel and forward_channel_id != -1:
+                user_channels = await get_user_channels_db(user_id)
+                channels_unique = set(user_channels)
+                if str(username_forward_channel) in list(channels_unique):
+                    await update_data_events_db(user_id, "forward_error",
+                                             {"step": current_step,
+                                              "channel_id": int(forward_channel_id), "error": "exist"})
+                    keyboard = await get_keyboard(["Это все"])
+                    await event.client.send_message(event.chat_id,
+                                                    "Этот канал уже добавлен! Но мы можем добавить другой 🙃",
+                                                    buttons=keyboard)
+                elif len(channels_unique) == 3 and str(username_forward_channel) not in channels_unique:
+                    await update_data_events_db(user_id, "forward_error",
+                                             {"step": current_step,
+                                              "channel_id": int(forward_channel_id), "error": "limit"})
+                    text = "Пока нельзя добавлять больше 3-х каналов. 😔\n\n" \
+                           "Но список в любой момент можно изменить по команде /channels"
+                    keyboard = await get_keyboard(["Это все"])
+                    await event.client.send_message(event.chat_id, text, buttons=keyboard)
 
-                await save_data(result["message"], str(user_id) + "_" + str(forward_channel_id))
-                await wait_post(event)
+                else:
+                    await update_data_events_db(user_id, "forward_message",
+                                             {"step": current_step, "channel_id": forward_channel_id})
+                    await update_user_channels_db(user_id, str(username_forward_channel))
+                    await _update_current_user_step(user_id, 2)
+                    await wait_post(event)
+            else:
+                pass
     else:
         pass
 
@@ -279,8 +329,9 @@ async def get_done(event):
     if await is_expected_steps(user_id, [6, 5, 11]):
         await _update_current_user_step(user_id, 4)
         text = "Могу исключить из отправок публикации, " \
-               "содержащие выбранные тобой ключевые слова. Продолжим?"
-        keyboard = get_keyboard(["Добавить", "Не нужно", "Назад"])
+               "содержащие выбранные тобой ключевые слова. Не буду присылать тебе посты, в которых их " \
+               "найду 🕵️\n"
+        keyboard = await get_keyboard(["Добавить", "Не нужно", "Назад"])
         await event.client.send_message(event.chat_id, text, buttons=keyboard)
     elif await is_expected_steps(user_id, [3, 4]):
         current_step = await _get_current_user_step(user_id)
@@ -295,39 +346,41 @@ async def get_done(event):
         if len(chooses_topic) != 0:
             await update_data_events_db(user_id, "choose_topic", {"step": current_step, "topics": chooses_topic})
             await update_data_topics_db(user_id, chooses_topic)
-        else:
-            pass
-
-        if await is_expected_steps(user_id, [3]):
-            user_cur_topics = await _get_user_states(user_id, "topics")
-            if len(user_cur_topics) != 0:
-                text = "Отличный выбор! \nМогу исключить из отправок публикации, " \
-                       "содержащие выбранные тобой ключевые слова. Вдруг новости про футбол или " \
-                       "очередной вирус уже надоели :) Продолжим?"
-                keyboard = get_keyboard(["Добавить", "Не нужно", "Назад"])
+            if await is_expected_steps(user_id, [3]):
+                user_cur_topics = await _get_user_states(user_id, "topics")
+                if len(user_cur_topics) != 0:
+                    text = "Запомнил! \n\nМогу исключить из отправок публикации, " \
+                   "содержащие выбранные тобой ключевые слова. Не буду присылать тебе посты, в которых " \
+                   "найду такое слово 🕵️\n"
+                    keyboard = await get_keyboard(["Добавить", "Не нужно", "Назад"])
+                    await _update_current_user_step(user_id, 4)
+                    await event.client.send_message(event.chat_id, text, buttons=keyboard)
+                else:
+                    text = "Не выбрано ни одной темы..🦦"
+                    keyboard = await get_keyboard(["Готово!"])
+                    await event.client.send_message(event.chat_id, text, buttons=keyboard)
+                    await get_end(event)
+            else:
+                text = "Запомнил!"
+                keyboard = await get_keyboard(["Запустить"])
                 await _update_current_user_step(user_id, 4)
                 await event.client.send_message(event.chat_id, text, buttons=keyboard)
-            else:
-                await event.client.send_message(event.chat_id, "Нужно что-то выбрать!", buttons=get_keyboard(["Готово"]))
-                await get_end(event)
         else:
-            text = "Отличный выбор!"
-            keyboard = get_keyboard(["Запустить"])
-            await _update_current_user_step(user_id, 4)
+            text = "Не выбрано ни одной темы..🦦"
+            keyboard = await get_keyboard(["Готово!"])
             await event.client.send_message(event.chat_id, text, buttons=keyboard)
     elif await is_expected_steps(user_id, [31]):
         user_cur_states = await _get_user_states(user_id, "states")
         user_cur_topics = await _get_user_states(user_id, "topics")
-        chooses_topic = list()
-        for state, topic in zip(user_cur_states, user_cur_topics):
-            if state != "":
-                chooses_topic.append(topic)
 
-        if len(chooses_topic) != 0:
-            await update_data_topics_db(user_id, chooses_topic)
-            text = "Обновил список тем"
+        chooses_topics = await get_choose_topics(user_cur_states, user_cur_topics)
+        if chooses_topics:
+            await update_data_topics_db(user_id, chooses_topics)
+            text = "Обновил список тем 💫"
         else:
-            text = "Не выбрано ни одной темы"
+            text = "Не выбрано ни одной темы..🦦"
+            keyboard = await get_keyboard(["Готово!"])
+            await event.client.send_message(event.chat_id, text, buttons=keyboard)
 
         await event.client.send_message(event.chat_id, text, buttons=Button.clear())
     else:
@@ -342,11 +395,15 @@ async def get_add_keywords(event):
     user_id = event.message.peer_id.user_id
 
     if await is_expected_steps(user_id, [4]):
-        await remove_from_db("user_keywords", user_id)
         await _update_current_user_step(user_id, 5)
-        text = "Хорошо! Напиши мне все ключевые слова через запятую (минимум два слова), " \
-               "чтобы я мог исключить новости, в которых они встречаются \nНапример: футбол, война, криптовалюты"
-        await event.client.send_message(event.chat_id, text)
+        text = "Напиши мне все ключевые слова через запятую (минимум два слова), " \
+               "чтобы я мог исключить новости, в которых они встречаются \n" \
+               "Например: `футбол, война, криптовалюты`"
+        await event.client.send_message(event.chat_id, text, buttons=Button.clear())
+    elif await is_expected_steps(user_id, [7]):
+        text = f"Введи через запятую новые ключевые слова " \
+               f"(минимум, два слова)"
+        await event.client.send_message(event.chat_id, text, buttons=Button.clear())
     else:
         pass
 
@@ -368,34 +425,41 @@ async def create_keywords(event):
     """"""
     keywords = event.message.message
     user_id = event.message.peer_id.user_id
+    print(keywords)
 
     if await is_expected_steps(user_id, [5]):
+        print(5)
         await _update_current_user_step(user_id, 6)
         if len(keywords) > 1000:
-            event.client.send_message(event.chat_id, "Слишком много слов, давай попробуем сократить список :)")
+            await event.client.send_message(event.chat_id, "Слишком много слов, "
+                                                           "давай попробуем сократить список 🌝")
         else:
             pattern = re.compile(r'\s+')
             keywords = re.sub(pattern, '', keywords)
-            keywords = keywords.split(",")
+            if len(keywords.split(",")) > 0:
+                keywords = keywords.split(",")
             await update_user_keywords_db(user_id, keywords)
 
-            text = "Отлично! Я добавил выбранные ключевые слова\n\n"
-            keyboard = get_keyboard(["Далее", "Назад"])
+            text = "Отлично! Я добавил выбранные ключевые слова 🗝\n\n" \
+                   "Давай проверим все настройки 😌"
+            keyboard = await get_keyboard(["Проверить", "Назад"])
             await event.client.send_message(event.chat_id, text, buttons=keyboard)
-    elif await is_expected_steps(user_id, [7, 14]):
-        await remove_from_db("user_channels", user_id)
+    elif await is_expected_steps(user_id, [7]):
+        await remove_from_db("user_keywords", user_id)
         await _update_current_user_step(user_id, 6)
         if len(keywords) > 1000:
-            event.client.send_message(event.chat_id, "Слишком много слов, давай попробуем сократить список :)")
+            await event.client.send_message(event.chat_id, "Слишком много слов, давай попробуем сократить список 🌝")
         else:
             pattern = re.compile(r'\s+')
             keywords = re.sub(pattern, '', keywords)
-            keywords = keywords.split(",")
+            if len(keywords.split(",")) > 0:
+                keywords = keywords.split(",")
 
             await update_user_keywords_db(user_id, keywords)
 
-            text = "Отлично! Я добавил выбранные ключевые слова\n\n"
-            keyboard = get_keyboard(["Запустить"])
+            text = "Отлично! Я добавил выбранные ключевые слова 🗝\n\n" \
+                   "Давай проверим все настройки 😌"
+            keyboard = await get_keyboard(["Проверить"])
             await event.client.send_message(event.chat_id, text, buttons=keyboard)
     else:
         pass
@@ -407,24 +471,24 @@ async def create_keywords(event):
 async def get_dont_keywords(event):
     """"""
     user_id = event.message.peer_id.user_id
-    await remove_from_db("user_keywords", user_id)
 
+    await remove_from_db("user_keywords", user_id)
     if await is_expected_steps(user_id, [4, 6]):
         await _update_current_user_step(user_id, 5)
-        keyboard = get_keyboard(["Запустить", "Назад"])
-        text = "Хорошо. Тогда жмякай на запуск!"
+        keyboard = await get_keyboard(["Проверить", "Назад"])
+        text = "Оки. Тогда давай еще раз все проверим!"
         await event.client.send_message(event.chat_id, text, buttons=keyboard)
     elif await is_expected_steps(user_id, [7]):
-        text = "Хорошо"
-        keyboard = get_keyboard(["Запустить"])
+        text = "Оки!"
+        keyboard = await get_keyboard(["Проверить"])
         await event.client.send_message(event.chat_id, text, buttons=keyboard)
     else:
-        await event.client.send_message(event.chat_id, "Нет такой команды")
+        pass
 
     return
 
 
-@bot.on(events.NewMessage(pattern="Запустить"))
+@bot.on(events.NewMessage(pattern="Проверить"))
 async def get_go(event):
     """"""
     user_id = event.message.peer_id.user_id
@@ -439,10 +503,10 @@ async def get_go(event):
         keywords = await get_user_keywords_db(user_id)
         keywords = ", ".join(keywords)
 
-        text = f"Давай все проверим\n\n\nВыбранные каналы: {channels} \n\n" \
-               f"Темы: {topics} \n\n" \
-               f"Ключевые слова для исключения: {keywords}\n"
-        keyboard = get_keyboard(["Все верно", "Изменить"])
+        text = f"Давай все проверим!\n\n\n💌 **Выбранные каналы:** {channels or 'Не выбрано'} \n\n" \
+               f"📝 **Темы:** {topics or 'Не выбрано'} \n\n" \
+               f"🗝 **Ключевые слова для исключения:** {keywords or 'Не выбрано'}\n"
+        keyboard = await get_keyboard(["Все верно ✅", "Изменить"])
 
         await event.client.send_message(event.chat_id, text, buttons=keyboard)
     else:
@@ -451,16 +515,17 @@ async def get_go(event):
     return
 
 
-@bot.on(events.NewMessage(pattern="Все верно"))
+@bot.on(events.NewMessage(pattern="Все верно ✅"))
 async def get_accept(event):
     """"""
     user_id = event.message.peer_id.user_id
 
     if await is_expected_steps(user_id, [11]):
         await _update_current_user_step(user_id, 12)
-        text = "Фильтрация новостей запущена:)\n\nПримерно раз в час я буду присылать" \
-               " отфильтрованные новости из твоих источников. \n\nЧтобы отключить меня, используй" \
-               " команду /stop"
+        text = "Ура, все готово!😇\n\nЧтобы запустить фильтрацию новостей, выбирай из списка команд" \
+               " /news, в этом режиме я буду делать репосты по твоим интересам из выбранных каналов\n\n" \
+               "Также в демо-режиме можно запустить суммаризацию новостей по команде /summary. " \
+               "В этом режиме я дополнительно сделаю обобщение длинных новостей в короткие выдержки 🤗"
         await event.client.send_message(event.chat_id, text, buttons=Button.clear())
     else:
         pass
@@ -480,7 +545,7 @@ async def get_change(event):
                "/channels - смена читаемых каналов\n" \
                "/keywords - изменение ключевых слов для исключения\n" \
                "/help - помощь по боту"
-        keyboard = get_keyboard(["Назад"])
+        keyboard = await get_keyboard(["Назад"])
         await event.client.send_message(event.chat_id, text, buttons=keyboard)
     else:
         pass
@@ -493,9 +558,7 @@ async def get_next(event):
     """"""
     user_id = event.message.peer_id.user_id
 
-    if await is_expected_steps(user_id, [6]):
-        await get_dont_keywords(event)
-    elif await is_expected_steps(user_id, [11]):
+    if await is_expected_steps(user_id, [11]):
         await get_go(event)
 
     return
@@ -508,32 +571,18 @@ async def get_next(event):
 
     if await is_expected_steps(user_id, [1]):
         await _update_current_user_step(user_id, 10)
-        keyboard = get_keyboard(["Назад"])
+        keyboard = await get_keyboard(["Назад"])
         text = "Бот, который поможет фильтровать новости из разных каналов" \
                " по выбранным интересам.\n\nВ наше время бывает трудно остановиться," \
-               " читая все новости подряд и легко словить меланхолию от прочитанного :)\n" \
-               "После выбора каналов, интересов и выбора ~~стопслов~~ ключевых слов, примерно раз в час я буду присылать" \
-               "новую порцию отфильтрованных постов из выбранных каналов\n\nЧтобы остановить меня, используй команду" \
-               " /stop\nПомощь доступна по команде /help\n\nРад быть полезным :)"
+               " читая все новости подряд и легко словить меланхолию от прочитанного 😔\n" \
+               "После выбора каналов, интересов и выбора ~~стопслов~~ ключевых слов, можно воспользоваться" \
+               " мной в двух режимах:\nКоманда /news - в таком режиме я буду присылать репосты из " \
+               "выбранных каналов по выбранным интересам\nКоманда /summary - в этом режиме я буду присылать краткие выдержки" \
+               " новостей из выбранных каналов по выбранным интересам\n\nПомощь доступна " \
+               "по команде /help\n\nРад быть полезным 🫡"
         await event.client.send_message(event.chat_id, text, buttons=keyboard)
     else:
         await event.client.send_message(event.chat_id, "Нет такой команды")
-
-    return
-
-
-@bot.on(events.NewMessage(pattern="Добавить"))
-async def get_next(event):
-    """"""
-    user_id = event.message.peer_id.user_id
-
-    if await is_expected_steps(user_id, [7]):
-        await _update_current_user_step(user_id, 14)
-        text = f"Введи через запятую новые ключевые слова " \
-               f"(минимум, два слова)"
-        await event.client.send_message(event.chat_id, text, buttons=Button.clear())
-    else:
-        pass
 
     return
 
@@ -560,22 +609,21 @@ async def get_back(event):
 
     return
 
-# / commands
-
 
 @bot.on(events.NewMessage(pattern="/keywords"))
 async def change_keywords(event):
     user_id = event.message.peer_id.user_id
     await _update_current_user_step(user_id, 7)
     if not await get_user_keywords_db(user_id):
-        keyboard = get_keyboard(["Добавить", "Не нужно"])
-        await event.client.send_message(event.chat_id, "На данный момент список ключевых слов пуст", buttons=keyboard)
+        keyboard = await get_keyboard(["Добавить", "Не нужно"])
+        await event.client.send_message(event.chat_id, "Список ключевых слов пуст 🙃", buttons=keyboard)
     else:
+        keyboard = await get_keyboard(["Удалить слова"])
         keywords = await get_user_keywords_db(user_id)
         keywords = ", ".join(keywords)
         text = f"Текущий список ключевых слов: {keywords} \n\nВведи через запятую новые ключевые слова " \
                f"(минимум, два слова)"
-        await event.client.send_message(event.chat_id, text, buttons=Button.clear())
+        await event.client.send_message(event.chat_id, text, buttons=keyboard)
 
     return
 
@@ -584,7 +632,7 @@ async def change_keywords(event):
 async def change_topics(event):
     user_id = event.message.peer_id.user_id
     if not await is_exist_temp_db("user_topics", user_id):
-        await event.client.send_message(event.chat_id, "На данный момент нет выбранных тем", buttons=Button.clear())
+        await event.client.send_message(event.chat_id, "На данный момент нет выбранных тем 🙃", buttons=Button.clear())
     else:
         await _update_current_user_step(user_id, 8)
         await get_end(event)
@@ -597,7 +645,7 @@ async def change_channels(event):
     user_id = event.message.peer_id.user_id
     await _update_current_user_step(user_id, 9)
     if not await get_user_channels_db(user_id):
-        await event.client.send_message(event.chat_id, "На данный момент нет выбранных каналов!", buttons=Button.clear())
+        await event.client.send_message(event.chat_id, "На данный момент нет выбранных каналов 🙃", buttons=Button.clear())
     else:
         channels = await get_user_channels_db(user_id)
         channels = set(channels)
@@ -611,10 +659,71 @@ async def change_channels(event):
     return
 
 
+@bot.on(events.NewMessage(pattern="/settings"))
+async def change_channels(event):
+    user_id = event.message.peer_id.user_id
+    await _update_current_user_step(user_id, 24)
+    if not await get_user_channels_db(user_id):
+        keyboard = await get_keyboard(["Начнем?"])
+        await event.client.send_message(event.chat_id, "Упс..настроек еще нет 🙃", buttons=keyboard)
+    else:
+        channels = await get_user_channels_db(user_id)
+        channels = set(channels)
+        channels = ", ".join([f"@{channel}" for channel in channels])
+        topics = await get_user_topics_db(user_id)
+        topics = await match_topics_name(topics)
+        topics = ", ".join(topics)
+        keywords = await get_user_keywords_db(user_id)
+        keywords = ", ".join(keywords)
+
+        text = f"Текущие настройки: \n\n\n💌 **Выбранные каналы:** {channels or 'Не выбрано'} \n\n" \
+               f"📝 **Темы:** {topics or 'Не выбрано'} \n\n" \
+               f"🗝 **Ключевые слова для исключения:** {keywords or 'Не выбрано'}\n"
+
+        await event.client.send_message(event.chat_id, text, buttons=Button.clear())
+
+    return
+
+
+@bot.on(events.NewMessage(pattern="/stat"))
+async def get_stat(event):
+    user_id = event.message.peer_id.user_id
+    await _update_current_user_step(user_id, 67)
+
+    filter_stat = await get_stat_filter_db(user_id)
+
+    if filter_stat:
+        await send_user_main_stat(event, filter_stat)
+    else:
+        keyboard = await get_keyboard(["Начнем?"])
+        await event.client.send_message(event.chat_id, "У вас пока нет данных с личной статистикой. "
+                                                       "Но никогда не поздно начать 😏", buttons=keyboard)
+
+    file_topics = await get_stat_interests()
+    await send_user_file_stat(event, file_topics, "Топ интересов, выбираемых пользователями")
+
+    file_keywords = await get_stat_keywords()
+    await send_user_file_stat(event, file_keywords, "Топ ключевых слов, выбираемых пользователями")
+
+    return
+
+
+@bot.on(events.NewMessage(pattern="Удалить слова"))
+async def change_keywords(event):
+    user_id = event.message.peer_id.user_id
+    if await is_expected_steps(user_id, [7]):
+        await remove_from_db("user_keywords", user_id)
+        text = f"Удалил текущий список слов 💫"
+        await event.client.send_message(event.chat_id, text, buttons=Button.clear())
+    else:
+        pass
+
+    return
+
+
 @bot.on(events.NewMessage(pattern="/help"))
 async def change_channels(event):
     print(event)
-    user_id = event.message.peer_id.user_id
 
     text = f"Помощь по использованию бота\n\n\n" \
            f"Список доступных команд:\n\n" \
@@ -622,7 +731,9 @@ async def change_channels(event):
            f"/interests - изменить темы для фильтрации новостей\n" \
            f"/keywords - изменить список ключевых слов\n" \
            f"/channels - изменить список каналов для чтения\n" \
-           f"/start - начать процесс заполнения настроек заново\n\n\n" \
+           f"/news - запустить фильтрацию новостей с репостами\n" \
+           f"/summary - запустить фильтрацию новостей с суммаризацией\n" \
+           f"/stat - посмотреть статистику \n\n\n" \
            f"По вопросам и предложениям можно писать @aspnmrv" \
            f""
 
@@ -632,3 +743,4 @@ async def change_channels(event):
 
 
 bot.run_until_disconnected()
+client.run_until_disconnected()

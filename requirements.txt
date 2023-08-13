@@ -37,3 +37,6 @@ Telethon==1.25.4
 tqdm==4.64.1
 urllib3==1.26.12
 yarl==1.8.1
+matplotlib==3.7.2
+seaborn==0.12.2
+Pillow==9.5.0
