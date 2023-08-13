@@ -22,17 +22,20 @@ class News:
         self.client = client
 
     @staticmethod
-    async def get_channel_info(channel_id: str) -> str:
+    async def get_channel_info(channel_id: int) -> str:
         """
         Returns the username of the channel by the channel id after calling the api
         """
         await asyncio.sleep(5)
         check_channel_exist = await check_channel_info_db(str(channel_id))
+        print("check_channel_exist", check_channel_exist)
         if not check_channel_exist:
             channel_info = requests.get(
                 f"https://api.telegram.org/{bot_api}/getChat?chat_id={channel_id}"
             ).json()
+            print("channel_info", channel_info)
             username_channel = channel_info["result"]["username"]
+            print("username_channel", username_channel)
             await insert_channel_info_db(channel_id, username_channel)
         else:
             username_channel = await check_channel_info_db(str(channel_id))

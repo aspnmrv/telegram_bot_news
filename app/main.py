@@ -91,8 +91,7 @@ async def get_news(event):
                                             "по команде /channels", buttons=Button.clear())
     else:
         await event.client.send_message(event.chat_id,
-                                        "Слишком много запросов за сегодня 🤓\n\n"
-                                        "Самое время отвлечься от нововстей!", buttons=Button.clear())
+                                        "Слишком много запросов за сегодня 🤓", buttons=Button.clear())
     return
 
 
@@ -117,8 +116,7 @@ async def get_summary(event):
                                             "по команде /channels", buttons=Button.clear())
     else:
         await event.client.send_message(event.chat_id,
-                                        "Слишком много запросов за сегодня 🤓\n\n"
-                                        "Самое время отвлечься от нововстей!", buttons=Button.clear())
+                                        "Слишком много запросов за сегодня 🤓", buttons=Button.clear())
     return
 
 
@@ -276,7 +274,9 @@ async def forwards_message(event):
             current_step = await _get_current_user_step(user_id)
             try:
                 forward_channel_id = int(str("100") + str(event.message.fwd_from.from_id.channel_id)) * -1
+                print("forward_channel_id", forward_channel_id)
                 channel_info = await News.get_channel_info(forward_channel_id)
+                print("channel_info", channel_info)
                 if not channel_info:
                     await asyncio.sleep(2)
                     channel_info = await News.get_channel_info(forward_channel_id)
