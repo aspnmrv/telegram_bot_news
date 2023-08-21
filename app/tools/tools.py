@@ -112,7 +112,10 @@ async def model_predict(data: List[str]):
     """"""
     try:
         return requests.post(model_predict_path, json={"news": data},
-                             headers={"content-type": "application/json; charset=utf-8"}).json()
+                             headers={
+                                 "content-type": "application/json; charset=utf-8",
+                                 "connection": "keep-alive"
+                             }).json()
     except Exception as e:
         return f"The server is not responding\n{e}"
 
@@ -125,7 +128,10 @@ async def get_model_summary(data: List[str]):
     print("data", data)
     try:
         return requests.post(model_summary_path, json={"text": data},
-                             headers={"content-type": "application/json; charset=utf-8"}).text
+                             headers={
+                                 "content-type": "application/json; charset=utf-8",
+                                 "connection": "keep-alive"
+                             }).text
     except Exception as e:
         return f"The server is not responding\n{e}"
 
