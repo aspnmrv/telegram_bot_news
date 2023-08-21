@@ -110,6 +110,7 @@ async def get_estimate_markup(data):
 
 async def model_predict(data: List[str]):
     """"""
+    print("model_predict")
     try:
         return requests.post(model_predict_path, json={"news": data},
                              headers={
@@ -122,6 +123,7 @@ async def model_predict(data: List[str]):
 
 async def get_model_summary(data: List[str]):
     """"""
+    print("get_model_summary")
     # data = "".join(data)
     # data = await clean_html(await remove_emoji(data))
     # data = await remove_duplicate_text(data)

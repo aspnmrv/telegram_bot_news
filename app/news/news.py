@@ -113,8 +113,10 @@ class News:
                                min_id: int = 0, is_first: bool = False) -> dict:
         """Generate last N posts from channel in dictionary format"""
 
+        print("get_sender_posts")
         await asyncio.sleep(3)
         channel_entity = await self.get_channel_entity(channel_id, channel_name)
+        print("channel_entity", channel_entity)
         await asyncio.sleep(3)
         if not is_first:
             posts = await self.client(

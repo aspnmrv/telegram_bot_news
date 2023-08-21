@@ -86,12 +86,17 @@ class Sender:
                 print("last_msg_users[channel]", last_msg_users[channel])
                 result = await news.get_sender_posts(channel_id=channel_id, channel_name=channel,
                                                      min_id=last_msg_users[channel], is_first=False)
+                print("result", result)
             else:
                 result = await news.get_sender_posts(channel_id=channel_id, channel_name=channel,
                                                      min_id=0, is_first=True)
+                print("else result", result)
             clean_messages = await prepare_data(result["message"])
+            print("clean_messages", clean_messages)
             preds = await model_predict(clean_messages)
+            print("preds", preds)
             labels = await get_pred_labels(preds)
+            print("labels", labels)
 
             if result["id"]:
                 print("if result[id]:")
