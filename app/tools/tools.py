@@ -108,14 +108,17 @@ async def get_estimate_markup(data):
     return markup
 
 
-def model_predict(data: List[str]):
+async def model_predict(data: List[str]):
     """"""
     print("model_predict")
     print("model_predict_path", model_predict_path)
     print("data", data)
     try:
-        result = requests.post(model_predict_path, json={"news": data},
-                             headers={"content-type": "application/json"}).json()
+        header = {
+            "content-type": "application/json; charset=utf-8",
+            "Connection": "keep-alive"
+        }
+        result = requests.post(model_predict_path, json={"news": data}, headers=header).json()
         return result
     except Exception as e:
         return f"The server is not responding\n{e}"
@@ -130,8 +133,11 @@ async def get_model_summary(data: List[str]):
     # data = await remove_duplicate_text(data)
     print("data", data)
     try:
-        result = requests.post(model_summary_path, json={"text": data},
-                             headers={"content-type": "application/json"}).text
+        header = {
+            "content-type": "application/json; charset=utf-8",
+            "Connection": "keep-alive"
+        }
+        result = requests.post(model_summary_path, json={"text": data}, headers=header).text
         return result
     except Exception as e:
         return f"The server is not responding\n{e}"

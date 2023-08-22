@@ -93,7 +93,7 @@ class Sender:
                 print("else result", result)
             clean_messages = await prepare_data(result["message"])
             print("clean_messages", clean_messages)
-            preds = model_predict(clean_messages)
+            preds = await model_predict(clean_messages)
             print("preds", preds)
             labels = await get_pred_labels(preds)
             print("labels", labels)
