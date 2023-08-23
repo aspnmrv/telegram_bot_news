@@ -109,13 +109,12 @@ async def get_estimate_markup(data):
     return markup
 
 
-async def model_predict(data: List[str]):
+def model_predict(data: List[str]):
     """"""
-    await asyncio.sleep(2)
+    # await asyncio.sleep(2)
     print("model_predict")
     print("model_predict_path", model_predict_path)
     print("data", data)
-    data = data[:2]
     try:
         header = {
             "content-type": "application/json",
@@ -123,8 +122,8 @@ async def model_predict(data: List[str]):
             "Accept": "application/json"
         }
         print("header", header)
-        result = requests.post(model_predict_path, json={"news": data}, headers=header, verify=False).json()
-        await asyncio.sleep(3)
+        result = requests.post(model_predict_path, json={"news": data}, headers=header).json()
+        # await asyncio.sleep(3)
         return result
     except Exception as e:
         return f"The server is not responding\n{e}"
