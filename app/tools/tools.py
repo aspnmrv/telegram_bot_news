@@ -115,6 +115,7 @@ async def model_predict(data: List[str]):
     print("model_predict")
     print("model_predict_path", model_predict_path)
     print("data", data)
+    data = data[:2]
     try:
         header = {
             "content-type": "application/json",
