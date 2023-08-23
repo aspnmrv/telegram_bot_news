@@ -1,5 +1,6 @@
 import sys
 import os
+import asyncio
 
 sys.path.insert(1, os.path.realpath(os.path.pardir))
 
@@ -110,6 +111,7 @@ async def get_estimate_markup(data):
 
 async def model_predict(data: List[str]):
     """"""
+    await asyncio.sleep(2)
     print("model_predict")
     print("model_predict_path", model_predict_path)
     print("data", data)
@@ -118,7 +120,9 @@ async def model_predict(data: List[str]):
             "content-type": "application/json; charset=utf-8",
             "Connection": "keep-alive"
         }
+        print("header", header)
         result = requests.post(model_predict_path, json={"news": data}, headers=header).json()
+        await asyncio.sleep(3)
         return result
     except Exception as e:
         return f"The server is not responding\n{e}"
@@ -132,12 +136,14 @@ async def get_model_summary(data: List[str]):
     # data = await clean_html(await remove_emoji(data))
     # data = await remove_duplicate_text(data)
     print("data", data)
+    await asyncio.sleep(3)
     try:
         header = {
             "content-type": "application/json; charset=utf-8",
             "Connection": "keep-alive"
         }
         result = requests.post(model_summary_path, json={"text": data}, headers=header).text
+        await asyncio.sleep(2)
         return result
     except Exception as e:
         return f"The server is not responding\n{e}"
