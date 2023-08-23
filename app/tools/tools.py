@@ -1,6 +1,7 @@
 import sys
 import os
 import asyncio
+import json
 
 sys.path.insert(1, os.path.realpath(os.path.pardir))
 
@@ -118,12 +119,13 @@ async def model_predict(data: List[str]):
     try:
         header = {
             "content-type": "application/json; charset=utf-8",
-            "Connection": "keep-alive"
+            "Connection": "close"
         }
         print("header", header)
-        result = requests.post(model_predict_path, json={"news": data}, headers=header).json()
+        data_json = {"news": data}
+        result = requests.post(model_predict_path, data=json.dumps(data_json), headers=header)
         await asyncio.sleep(3)
-        return result
+        return result.json()
     except Exception as e:
         return f"The server is not responding\n{e}"
 
