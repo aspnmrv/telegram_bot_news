@@ -134,6 +134,7 @@ dmypy.json
 # Custom
 config/config.yml
 config/config.env
+app/db/config.json
 data/sophie.db
 app/config.json
 model/
