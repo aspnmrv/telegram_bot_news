@@ -314,12 +314,13 @@ async def forwards_message(event):
                     await update_data_events_db(user_id, "forward_message",
                                              {"step": current_step, "channel_id": forward_channel_id})
                     await update_user_channels_db(user_id, str(username_forward_channel))
-                    await _update_current_user_step(user_id, 2)
                     await wait_post(event)
                     if await is_expected_steps(user_id, [9]):
+                        print("nnnnnnnnnn")
                         await event.client.send_message(event.chat_id, "Кстати, не забудь добавить все каналы, "
                                                                  "которые тебе нужны 📝\n\nПредыдущий список каналов "
                                                                  "я очистил")
+                    await _update_current_user_step(user_id, 2)
             else:
                 pass
     else:
