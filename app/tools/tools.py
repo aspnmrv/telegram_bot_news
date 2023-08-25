@@ -22,10 +22,10 @@ from pathlib import Path
 from typing import List
 from tempfile import NamedTemporaryFile
 from app.db.db import get_stat_topics_db, get_stat_keywords_db, update_data_topics_db
-from .prepare_data import remove_duplicate_text
 
 
 PATH = Path(__file__).parent.resolve() / "data"
+
 
 model_predict_path = config.model_predict_path
 model_summary_path = config.model_summary_path
@@ -37,13 +37,6 @@ async def read_data(filename):
         print(filename)
         data = pickle.load(f)
     return data
-
-
-# async def save_data(data, suffix=""):
-#     """"""
-#     with open("/data/" + f"data_{suffix}.pkl", "wb") as f:
-#         pickle.dump(data, f)
-#     return
 
 
 async def union_dicts(dicts):
@@ -112,10 +105,6 @@ async def get_estimate_markup(data):
 
 async def model_predict(data: List[str]):
     """"""
-    await asyncio.sleep(2)
-    print("model_predict")
-    print("model_predict_path", model_predict_path)
-    print("data", data)
     try:
         header = {
             "content-type": "application/json",
@@ -123,7 +112,6 @@ async def model_predict(data: List[str]):
             "Accept": "application/json",
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36"
         }
-        print("header", header)
         result = requests.post(model_predict_path, json={"news": data}, headers=header).json()
         await asyncio.sleep(3)
         return result
@@ -133,13 +121,6 @@ async def model_predict(data: List[str]):
 
 async def get_model_summary(data: List[str]):
     """"""
-    print("get_model_summary")
-    print("model_summary_path", model_summary_path)
-    # data = "".join(data)
-    # data = await clean_html(await remove_emoji(data))
-    # data = await remove_duplicate_text(data)
-    print("data", data)
-    await asyncio.sleep(3)
     try:
         header = {
             "content-type": "application/json; charset=utf-8",

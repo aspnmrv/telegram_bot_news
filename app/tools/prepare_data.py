@@ -102,7 +102,7 @@ async def check_keywords(user_id: int, text: str) -> bool:
 
     user_keywords = await get_user_keywords_db(user_id)
 
-    if any(word in text for word in user_keywords):
+    if any(word.lower() in text for word in user_keywords):
         return True
     else:
         return False

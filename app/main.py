@@ -46,9 +46,10 @@ nltk.download("punkt")
 
 bot = TelegramClient("bot", api_id, api_hash).start(bot_token=bot_token)
 
-session_dir = Path(__file__).parent.parent.resolve()
+session_dir = Path(__file__).parent.resolve()
+
 client = TelegramClient(
-    str(session_dir / "app" / "session_name.session"),
+    str(session_dir / "session_name.session"),
     api_id,
     api_hash
 )
@@ -100,7 +101,7 @@ async def get_summary(event):
     user_id = event.message.peer_id.user_id
     cnt_uses = await get_stat_use_db(user_id)
     print("cnt_uses", cnt_uses)
-    if cnt_uses < 6:
+    if cnt_uses < 10:
         await event.client.send_message(event.chat_id, "Обрабатываю..Мне потребуется до 3-х минут ☺️",
                                         buttons=Button.clear())
         user_topics = await get_user_topics_db(user_id)
@@ -315,6 +316,10 @@ async def forwards_message(event):
                     await update_user_channels_db(user_id, str(username_forward_channel))
                     await _update_current_user_step(user_id, 2)
                     await wait_post(event)
+                    if await is_expected_steps(user_id, [9]):
+                        event.client.send_message(event.chat_id, "Кстати, не забудь добавить все каналы, "
+                                                                 "которые тебе нужны 📝\n\nПредыдущий список каналов "
+                                                                 "я очистил")
             else:
                 pass
     else:
@@ -425,12 +430,11 @@ async def create_keywords(event):
     """"""
     keywords = event.message.message
     user_id = event.message.peer_id.user_id
-    print(keywords)
 
     if await is_expected_steps(user_id, [5]):
         print(5)
         await _update_current_user_step(user_id, 6)
-        if len(keywords) > 1000:
+        if len(keywords) > 500:
             await event.client.send_message(event.chat_id, "Слишком много слов, "
                                                            "давай попробуем сократить список 🌝")
         else:
@@ -438,6 +442,7 @@ async def create_keywords(event):
             keywords = re.sub(pattern, '', keywords)
             if len(keywords.split(",")) > 0:
                 keywords = keywords.split(",")
+                keywords = [word.lower() for word in keywords if word != ""]
             await update_user_keywords_db(user_id, keywords)
 
             text = "Отлично! Я добавил выбранные ключевые слова 🗝\n\n" \
@@ -454,7 +459,7 @@ async def create_keywords(event):
             keywords = re.sub(pattern, '', keywords)
             if len(keywords.split(",")) > 0:
                 keywords = keywords.split(",")
-
+                keywords = [word.lower() for word in keywords if word != ""]
             await update_user_keywords_db(user_id, keywords)
 
             text = "Отлично! Я добавил выбранные ключевые слова 🗝\n\n" \
@@ -576,8 +581,8 @@ async def get_next(event):
                " по выбранным интересам.\n\nВ наше время бывает трудно остановиться," \
                " читая все новости подряд и легко словить меланхолию от прочитанного 😔\n" \
                "После выбора каналов, интересов и выбора ~~стопслов~~ ключевых слов, можно воспользоваться" \
-               " мной в двух режимах:\nКоманда /news - в таком режиме я буду присылать репосты из " \
-               "выбранных каналов по выбранным интересам\nКоманда /summary - в этом режиме я буду присылать краткие выдержки" \
+               " мной в двух режимах:\nЯ могу присылать репосты из " \
+               "выбранных каналов по выбранным интересам, а также присылать краткие выдержки" \
                " новостей из выбранных каналов по выбранным интересам\n\nПомощь доступна " \
                "по команде /help\n\nРад быть полезным 🫡"
         await event.client.send_message(event.chat_id, text, buttons=keyboard)
@@ -652,7 +657,8 @@ async def change_channels(event):
         channels = [f"@{channel}" for channel in channels]
         channels = ", ".join(channels)
         text = f"Текущий список читаемых каналов: {channels} \nЧтобы выбрать новые, перешли по одному посту" \
-               f" из каждого канала, который хочешь читать (не более трех каналов)\n "
+               f" из каждого канала, который хочешь читать (не более трех каналов)" \
+               f"\n\n"
 
         await event.client.send_message(event.chat_id, text, buttons=Button.clear())
 

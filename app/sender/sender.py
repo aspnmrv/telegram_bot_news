@@ -101,15 +101,12 @@ class Sender:
 
             if result["id"]:
                 print("if result[id]:")
-                # if channel not in last_msg_users.keys():
                 max_post_id = max(result["id"])
                 channel_last_posts_log[channel] = max_post_id
                 print("channel_last_posts_log", channel_last_posts_log)
             else:
                 max_post_id = last_msg_users[channel]
                 channel_last_posts_log[channel] = max_post_id
-            # else:
-            #     pass
 
             if is_summary:
                 for idx, (label, post) in enumerate(zip(labels, result["id"])):
@@ -166,7 +163,7 @@ class Sender:
                 await update_stat_use_db(user_id, is_summary=True, is_sent=True)
                 await insert_messages_score_db(uid, user_id, "_summary", 0, "")
             else:
-                sent_text = "Из свеженького по выбранным темам ничего не нашлось!"
+                sent_text = "Из свеженького по выбранным темам ничего не нашлось! 🤐"
                 await self.bot.send_message(user_id, sent_text, silent=True)
                 await update_stat_use_db(user_id, is_summary=True, is_sent=False)
         else:
