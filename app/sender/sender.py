@@ -65,7 +65,7 @@ class Sender:
                     format_text += "🟣 " + text + "\n\n"
                     sent_messages[channel] = format_text
                 else:
-                    pass
+                    sent_messages[channel] = ""
         return sent_messages
 
     async def generate_format_message_to_send(self, user_id: int, user_channels: list, user_topics: list,
@@ -155,10 +155,14 @@ class Sender:
             if sent_messages:
                 sent_limit = 0
                 for channel, text in sent_messages.items():
-                    sent_text = f"Суммаризация из канала: @{channel}\n" + text + "\n\n"
-                    if sent_limit < 5:
-                        await self.bot.send_message(user_id, sent_text, silent=True)
-                        sent_limit += 1
+                    if text:
+                        sent_text = f"Суммаризация из канала: @{channel}\n" + text + "\n\n"
+                        if sent_limit < 5:
+                            await self.bot.send_message(user_id, sent_text, silent=True)
+                            sent_limit += 1
+                    else:
+                        await self.bot.send_message(user_id, f"В канале @{channel} по выбранным "
+                                                             f"темам ничего не нашли 🥱\n\n", silent=True)
                 await self.bot.send_message(user_id, "Буду рад оценке 🐱", buttons=markup, silent=True)
                 await update_stat_use_db(user_id, is_summary=True, is_sent=True)
                 await insert_messages_score_db(uid, user_id, "_summary", 0, "")
