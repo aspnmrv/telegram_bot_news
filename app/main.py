@@ -317,7 +317,7 @@ async def forwards_message(event):
                     await _update_current_user_step(user_id, 2)
                     await wait_post(event)
                     if await is_expected_steps(user_id, [9]):
-                        event.client.send_message(event.chat_id, "Кстати, не забудь добавить все каналы, "
+                        await event.client.send_message(event.chat_id, "Кстати, не забудь добавить все каналы, "
                                                                  "которые тебе нужны 📝\n\nПредыдущий список каналов "
                                                                  "я очистил")
             else:
