@@ -136,6 +136,8 @@ config/config.yml
 config/config.env
 app/db/config.json
 data/sophie.db
+data/logs.log
+app/data/logs.log
 app/config.json
 model/
 .jpg

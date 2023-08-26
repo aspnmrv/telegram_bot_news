@@ -13,3 +13,5 @@ services:
     volumes:
       - ./data:/data/
       - ./sessions:/session
+    extra_hosts:
+      - "host.docker.internal:172.17.0.1"

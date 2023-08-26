@@ -659,3 +659,18 @@ async def get_channel_id_by_name_db(channel_name) -> tuple or bool:
     conn.commit()
     GLOBAL_POOL.putconn(conn)
     return data[0][0] if data else False
+
+
+async def insert_internal_info_db(action_type, func_name, is_exist, user_id=0) -> None:
+    """"""
+    created_at = datetime.now()
+    conn = GLOBAL_POOL.getconn()
+    cur = conn.cursor()
+    query = f"""
+        INSERT INTO public.internal_info (created_at, user_id, type, is_exist, func)
+        VALUES ('{created_at}', {user_id}, {action_type}, {is_exist}, '{func_name}')
+    """
+    cur.execute(query)
+    conn.commit()
+    GLOBAL_POOL.putconn(conn)
+    return None

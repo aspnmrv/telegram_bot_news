@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import List
 from tempfile import NamedTemporaryFile
 from app.db.db import get_stat_topics_db, get_stat_keywords_db, update_data_topics_db
+from langdetect import detect, detect_langs
 
 
 PATH = Path(__file__).parent.resolve() / "data"
@@ -226,3 +227,12 @@ async def get_choose_topics(user_cur_states: list, user_cur_topics: list) -> lis
 async def get_emoji_topics(topic_name: str) -> str:
     """"""
     return EMOJI_TOPICS[topic_name] + f" {topic_name}"
+
+
+async def is_ru_language(posts: list) -> bool:
+    """"""
+    result = []
+    print("posts", posts)
+    for text in posts:
+        result.append(str(str(detect_langs(text)[0]).split(":")[0]) == "ru")
+    return all(result)

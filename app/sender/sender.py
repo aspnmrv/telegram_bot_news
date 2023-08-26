@@ -148,6 +148,7 @@ class Sender:
         if is_summary:
             form = await self.generate_format_message_to_send(user_id, user_channels,
                                                               user_topics, user_last_messages, True)
+            print("form", form)
             uid = uuid.uuid4()
             markup = self.bot.build_reply_markup(await get_estimate_markup(uid))
             sent_messages = await self.generate_message_to_send(form)

@@ -5,12 +5,11 @@ sys.path.append(os.path.dirname(__file__))
 sys.path.insert(1, os.path.realpath(os.path.pardir))
 
 import requests
-import time
 import config
 import asyncio
 
 from app.db.db import check_channel_entity_db, insert_channel_entity_db, \
-    check_channel_info_db, insert_channel_info_db
+    check_channel_info_db, insert_channel_info_db, insert_internal_info_db
 from telethon.tl.functions.messages import GetHistoryRequest
 from telethon.tl.types import InputPeerChannel
 
@@ -27,7 +26,7 @@ class News:
         """
         Returns the username of the channel by the channel id after calling the api
         """
-        await asyncio.sleep(5)
+        await asyncio.sleep(7)
         check_channel_exist = await check_channel_info_db(str(channel_id))
         print("check_channel_exist", check_channel_exist)
         if not check_channel_exist:
@@ -37,10 +36,12 @@ class News:
             print("channel_info", channel_info)
             username_channel = channel_info["result"]["username"]
             print("username_channel", username_channel)
+            await insert_internal_info_db(1, "get_channel_info", False)
             await insert_channel_info_db(channel_id, username_channel)
         else:
             username_channel = await check_channel_info_db(str(channel_id))
             username_channel = username_channel[0][1]
+            await insert_internal_info_db(1, "get_channel_info", True)
 
         return username_channel if username_channel else None
 
@@ -48,7 +49,7 @@ class News:
         """
         Returns the entity of the channel by username after calling the client api
         """
-        await asyncio.sleep(5)
+        await asyncio.sleep(7)
         if channel_id:
             channel_id = int(channel_id[4:])
             # Checking for the existence of an entity in the database
@@ -60,20 +61,24 @@ class News:
                 hash = channel_entity.access_hash
                 entity = InputPeerChannel(id, hash)
                 await insert_channel_entity_db(id, hash)
+                await insert_internal_info_db(3, "get_channel_entity", False)
             # If entity already exists, take the entity from the database
             else:
                 access_hash = int(check_channel_entity[0][0])
                 entity = InputPeerChannel(channel_id, access_hash)
+                await insert_internal_info_db(3, "get_channel_entity", True)
         else:
             channel_entity = await self.client.get_entity(channel_name)
             id = channel_entity.id
             hash = channel_entity.access_hash
             entity = InputPeerChannel(id, hash)
             check_channel_entity = await check_channel_entity_db(channel_id)
+            await insert_internal_info_db(3, "get_channel_entity", False)
 
             # If the entity was not yet in the database, add data about the entity
             if not check_channel_entity:
                 await insert_channel_entity_db(id, hash)
+        await asyncio.sleep(3)
 
         return entity
 
@@ -115,9 +120,10 @@ class News:
         """Generate last N posts from channel in dictionary format"""
 
         print("get_sender_posts")
-        await asyncio.sleep(3)
+        await asyncio.sleep(6)
         channel_entity = await self.get_channel_entity(channel_id, channel_name)
         print("channel_entity", channel_entity)
+        await insert_internal_info_db(2, "get_sender_posts", True)
         await asyncio.sleep(3)
         if not is_first:
             posts = await self.client(
@@ -137,7 +143,7 @@ class News:
                 GetHistoryRequest(
                     peer=channel_entity,
                     offset_id=0,
-                    limit=8,
+                    limit=30,
                     offset_date=None,
                     max_id=0,
                     min_id=0,
