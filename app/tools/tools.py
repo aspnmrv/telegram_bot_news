@@ -1,3 +1,4 @@
+print("tools")
 import sys
 import os
 import asyncio
@@ -21,16 +22,18 @@ from app.globals import TOPICS, EMOJI_TOPICS
 from pathlib import Path
 from typing import List
 from tempfile import NamedTemporaryFile
+print("tools2")
 from app.db.db import get_stat_topics_db, get_stat_keywords_db, update_data_topics_db
+print("tools3")
 from langdetect import detect, detect_langs
-
+print("tools4")
 
 PATH = Path(__file__).parent.resolve() / "data"
 
 
 model_predict_path = config.model_predict_path
 model_summary_path = config.model_summary_path
-
+print("tools5")
 
 async def read_data(filename):
     """"""

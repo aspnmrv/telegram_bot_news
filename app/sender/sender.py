@@ -1,3 +1,4 @@
+print("sender")
 import sys
 import os
 
@@ -8,7 +9,9 @@ import uuid
 import re
 
 from app.db.db import *
+print("sender2")
 from app.news.news import News
+print("sender3")
 from app.tools.prepare_data import prepare_data, get_pred_labels, check_keywords
 from app.tools.tools import match_topics_name, get_estimate_markup, \
     unmatch_topic_name, model_predict, get_model_summary, get_emoji_topics

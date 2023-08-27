@@ -13,5 +13,7 @@ services:
     volumes:
       - ./data:/data/
       - ./sessions:/session
-    extra_hosts:
-      - "host.docker.internal:172.17.0.1"
+    sysctls:
+        - net.ipv4.tcp_keepalive_time=10
+        - net.ipv4.tcp_keepalive_intvl=10
+        - net.ipv4.tcp_keepalive_probes=5

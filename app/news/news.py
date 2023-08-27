@@ -3,13 +3,14 @@ import os
 
 sys.path.append(os.path.dirname(__file__))
 sys.path.insert(1, os.path.realpath(os.path.pardir))
-
+print("news")
 import requests
 import config
 import asyncio
 
 from app.db.db import check_channel_entity_db, insert_channel_entity_db, \
     check_channel_info_db, insert_channel_info_db, insert_internal_info_db
+print("news2")
 from telethon.tl.functions.messages import GetHistoryRequest
 from telethon.tl.types import InputPeerChannel
 

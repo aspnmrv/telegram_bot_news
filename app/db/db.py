@@ -1,16 +1,21 @@
+print("db")
 import psycopg2
 import json
 import os
 import pandas.io.sql as sqlio
 import sys
+import logging
+
 
 sys.path.append(os.path.dirname(__file__))
 sys.path.insert(1, os.path.realpath(os.path.pardir))
+logging.basicConfig(filename="logs.log", level=logging.DEBUG)
+logging.info("db_start")
 
 from psycopg2 import pool
 from app.globals import MINCONN, MAXCONN
 from datetime import datetime
-
+print("db2")
 
 def connect_from_config(file):
     keepalive_kwargs = {
@@ -21,6 +26,7 @@ def connect_from_config(file):
     }
     with open(file, 'r') as fp:
         config = json.load(fp)
+        print("config", config)
     return psycopg2.connect(**config, **keepalive_kwargs)
 
 
@@ -31,8 +37,9 @@ def create_pool_from_config(minconn, maxconn, file):
 
 
 CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
+print("path", CONFIG_PATH)
 GLOBAL_POOL = create_pool_from_config(MINCONN, MAXCONN, CONFIG_PATH)
-
+print("success")
 
 def reconnect():
     """"""
