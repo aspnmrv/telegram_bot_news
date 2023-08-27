@@ -142,12 +142,11 @@ class Sender:
         if is_summary:
             form = await self.generate_format_message_to_send(user_id, user_channels,
                                                               user_topics, user_last_messages, True)
-            print("form", form)
             uid = uuid.uuid4()
             markup = self.bot.build_reply_markup(await get_estimate_markup(uid))
             sent_messages = await self.generate_message_to_send(form)
             print("sent_messages", sent_messages)
-            if sent_messages:
+            if any(sent_messages.values()):
                 sent_limit = 0
                 for channel, text in sent_messages.items():
                     if text:
@@ -157,7 +156,7 @@ class Sender:
                             sent_limit += 1
                     else:
                         await self.bot.send_message(user_id, f"В канале @{channel} по выбранным "
-                                                             f"темам ничего не нашли 🥱\n\n", silent=True)
+                                                             f"темам ничего не нашел 🥱\n\n", silent=True)
                 await self.bot.send_message(user_id, "Буду рад оценке 🐱", buttons=markup, silent=True)
                 await update_stat_use_db(user_id, is_summary=True, is_sent=True)
                 await insert_messages_score_db(uid, user_id, "_summary", 0, "")
