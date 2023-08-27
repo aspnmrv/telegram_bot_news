@@ -9,9 +9,7 @@ import uuid
 import re
 
 from app.db.db import *
-print("sender2")
 from app.news.news import News
-print("sender3")
 from app.tools.prepare_data import prepare_data, get_pred_labels, check_keywords
 from app.tools.tools import match_topics_name, get_estimate_markup, \
     unmatch_topic_name, model_predict, get_model_summary, get_emoji_topics
@@ -46,7 +44,7 @@ class Sender:
             for message in messages:
                 channel_messages.append(list(message.keys())[0])
             news_bucket[channel] = channel_messages
-
+        print("news_bucket", news_bucket)
         channel_summary = dict()
         for channel, messages in news_bucket.items():
             result = list()
@@ -57,7 +55,7 @@ class Sender:
                         if len(message.split(" ")) > 8:
                             result.append(summary_result)
             channel_summary[channel] = result
-
+        print("channel_summary", channel_summary)
         sent_messages = dict()
 
         for channel, summary_text in channel_summary.items():
@@ -69,6 +67,7 @@ class Sender:
                     sent_messages[channel] = format_text
                 else:
                     sent_messages[channel] = ""
+        print("sent_messages_keys", sent_messages.keys())
         return sent_messages
 
     async def generate_format_message_to_send(self, user_id: int, user_channels: list, user_topics: list,

@@ -6,34 +6,24 @@ import logging
 
 
 import config
-print("main")
 from news.news import News
-print("main2")
 from sender.sender import Sender
-print("main3")
 from telethon.tl.custom import Button
 from telethon import TelegramClient, events, sync, functions
 from telethon.tl.types import InputPeerChannel
 from globals import TOPICS
-print("main4")
 from tools.tools import read_data, \
     is_expected_steps, get_keyboard, match_topics_name, remove_file, get_bar_plot, \
     get_stat_interests, get_stat_keywords, send_user_main_stat, send_user_file_stat, get_choose_topics, is_ru_language
-print("main5")
 from db.db_tools import _update_current_user_step, _update_user_states, _get_user_states, \
     _get_current_user_step, _truncate_table, _create_db
-print("main6")
 from tools.prepare_data import prepare_data
-print("main7")
 from topics.topics import get_state_markup, update_text_from_state_markup, build_markup, get_proposal_topics, get_available_topics
-print("main8")
 from pathlib import Path
-print("main9")
 from db.db import *
-print("main10")
 
-#logging.basicConfig(filename=Path(__file__).parent.resolve() / "data" / "logs.log", level=logging.INFO)
-#logging.info("start")
+logging.basicConfig(filename=Path(__file__).parent.resolve() / "data" / "logs.log", level=logging.INFO)
+logging.info("start")
 
 
 api_id = config.app_id
@@ -53,13 +43,11 @@ except AttributeError:
     pass
 else:
     ssl._create_default_https_context = _create_unverified_https_context
-print("main111")
-print("main12")
+
 bot = TelegramClient("bot", api_id, api_hash).start(bot_token=bot_token)
 
 session_dir = Path(__file__).parent.resolve()
-print("session_dir", session_dir)
-print("main13")
+
 client = TelegramClient(
     str("session_name.session"),
     api_id,

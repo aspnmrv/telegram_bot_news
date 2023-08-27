@@ -1,14 +1,13 @@
 import sys
 import os
-print("topics")
+
 sys.path.append(os.path.dirname(__file__))
 sys.path.insert(1, os.path.realpath(os.path.pardir))
 
 from telethon.tl.custom import Button
 from app.db.db_tools import _update_user_states
-print("topics2")
 from app.tools.tools import model_predict
-print("topics3")
+
 
 async def get_state_markup(markup, user_id):
     """"""
