@@ -195,7 +195,7 @@ async def send_user_main_stat(event, filter_stat):
         await event.client.send_message(event.chat_id, text_filter_topics,
                                         buttons=Button.clear(), parse_mode="Markdown")
     if saved_time_keywords > 0:
-        text_filter_keywords = f"💜 💜 А столько времени вы сэкономили, благодаря фильтрации постов по" \
+        text_filter_keywords = f"💜 💜 А столько времени вы сэкономили, благодаря фильтрации постов по " \
                                f"ключевым словам: **{saved_time_keywords} минут**"
         await event.client.send_message(event.chat_id, text_filter_keywords, buttons=Button.clear(),
                                         parse_mode="Markdown")

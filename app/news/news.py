@@ -25,7 +25,7 @@ class News:
         """
         Returns the username of the channel by the channel id after calling the api
         """
-        await asyncio.sleep(7)
+        await asyncio.sleep(6)
         check_channel_exist = await check_channel_info_db(str(channel_id))
         print("check_channel_exist", check_channel_exist)
         if not check_channel_exist:
@@ -48,7 +48,7 @@ class News:
         """
         Returns the entity of the channel by username after calling the client api
         """
-        await asyncio.sleep(7)
+        await asyncio.sleep(5)
         if channel_id:
             channel_id = int(channel_id[4:])
             # Checking for the existence of an entity in the database
@@ -119,11 +119,11 @@ class News:
         """Generate last N posts from channel in dictionary format"""
 
         print("get_sender_posts")
-        await asyncio.sleep(6)
+        await asyncio.sleep(5)
         channel_entity = await self.get_channel_entity(channel_id, channel_name)
         print("channel_entity", channel_entity)
         await insert_internal_info_db(2, "get_sender_posts", True)
-        await asyncio.sleep(3)
+        await asyncio.sleep(1)
         if not is_first:
             posts = await self.client(
                 GetHistoryRequest(

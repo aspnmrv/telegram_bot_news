@@ -44,7 +44,6 @@ class Sender:
             for message in messages:
                 channel_messages.append(list(message.keys())[0])
             news_bucket[channel] = channel_messages
-        print("news_bucket", news_bucket)
         channel_summary = dict()
         for channel, messages in news_bucket.items():
             result = list()
@@ -55,7 +54,6 @@ class Sender:
                         if len(message.split(" ")) > 8:
                             result.append(summary_result)
             channel_summary[channel] = result
-        print("channel_summary", channel_summary)
         sent_messages = dict()
 
         for channel, summary_text in channel_summary.items():
@@ -70,7 +68,6 @@ class Sender:
                         sent_messages[channel] = ""
             else:
                 sent_messages[channel] = ""
-        print("sent_messages_keys", sent_messages.keys())
         return sent_messages
 
     async def generate_format_message_to_send(self, user_id: int, user_channels: list, user_topics: list,
@@ -88,27 +85,19 @@ class Sender:
             channel_id = await get_channel_id_by_name_db(channel)
             news = News(self.client)
             if channel in last_msg_users.keys():
-                print("if channel in last_msg_users.keys():")
-                print("last_msg_users[channel]", last_msg_users[channel])
                 result = await news.get_sender_posts(channel_id=channel_id, channel_name=channel,
                                                      min_id=last_msg_users[channel], is_first=False)
-                print("result", result)
             else:
                 result = await news.get_sender_posts(channel_id=channel_id, channel_name=channel,
                                                      min_id=0, is_first=True)
-                print("else result", result)
             clean_messages = await prepare_data(result["message"])
-            print("clean_messages", clean_messages)
             preds = await model_predict(clean_messages)
-            print("preds", preds)
             labels = await get_pred_labels(preds)
-            print("labels", labels)
 
             if result["id"]:
                 print("if result[id]:")
                 max_post_id = max(result["id"])
                 channel_last_posts_log[channel] = max_post_id
-                print("channel_last_posts_log", channel_last_posts_log)
             else:
                 max_post_id = last_msg_users[channel]
                 channel_last_posts_log[channel] = max_post_id
@@ -179,9 +168,7 @@ class Sender:
         else:
             form = await self.generate_format_message_to_send(user_id, user_channels, user_topics,
                                                               user_last_messages, False)
-            print("form", form)
             num_of_channels = len(user_channels)
-            print("num_of_channels", num_of_channels)
             sent_limit = 0
             for channel, post_ids in form.items():
                 print("channel", channel)
