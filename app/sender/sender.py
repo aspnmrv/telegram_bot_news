@@ -60,13 +60,16 @@ class Sender:
 
         for channel, summary_text in channel_summary.items():
             format_text = "\n"
-            for text in summary_text:
-                text = text.split("\n")[0]
-                if len(text.split(" ")) > 5:
-                    format_text += "🟣 " + text + "\n\n"
-                    sent_messages[channel] = format_text
-                else:
-                    sent_messages[channel] = ""
+            if summary_text:
+                for text in summary_text:
+                    text = text.split("\n")[0]
+                    if len(text.split(" ")) > 5:
+                        format_text += "🟣 " + text + "\n\n"
+                        sent_messages[channel] = format_text
+                    else:
+                        sent_messages[channel] = ""
+            else:
+                sent_messages[channel] = ""
         print("sent_messages_keys", sent_messages.keys())
         return sent_messages
 
