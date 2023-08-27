@@ -33,7 +33,6 @@ PASS = config.password
 login = config.login
 
 PATH = Path(__file__).parent.resolve() / "data"
-print("main11")
 import nltk
 import ssl
 
@@ -54,7 +53,7 @@ client = TelegramClient(
     api_hash
 )
 client.connect()
-print("kek")
+
 print(client.is_user_authorized())
 
 if not client.is_user_authorized():
@@ -78,13 +77,12 @@ async def get_news(event):
     cnt_uses = await get_stat_use_db(user_id)
     print("cnt_uses", cnt_uses)
     if cnt_uses < 10:
-        await event.client.send_message(event.chat_id, "Обрабатываю..Мне потребуется до 3-х минут ☺️",
+        await event.client.send_message(event.chat_id, "Обрабатываю..Мне потребуется до 5 минут ☺️",
                                         buttons=Button.clear())
         user_topics = await get_user_topics_db(user_id)
         if user_topics:
             sender = Sender(client, bot)
             data = await get_data_channels_db(user_id)
-            print("data", data)
             await sender.send_aggregate_news(user_id, data, user_topics, False)
         else:
             await event.client.send_message(event.chat_id,
@@ -104,7 +102,7 @@ async def get_summary(event):
     await update_data_events_db(user_id, "summary", {"step": -1})
     print("cnt_uses", cnt_uses)
     if cnt_uses < 10:
-        await event.client.send_message(event.chat_id, "Обрабатываю..Мне потребуется до 3-х минут ☺️",
+        await event.client.send_message(event.chat_id, "Обрабатываю..Мне потребуется до 5 минут ☺️",
                                         buttons=Button.clear())
         user_topics = await get_user_topics_db(user_id)
         if user_topics:
@@ -790,7 +788,6 @@ async def change_channels(event):
            f"/news - запустить фильтрацию новостей с репостами\n" \
            f"/summary - запустить фильтрацию новостей с суммаризацией\n" \
            f"/stat - посмотреть статистику \n\n\n" \
-           f"По вопросам и предложениям можно писать @aspnmrv" \
            f""
 
     await event.client.send_message(event.chat_id, text, buttons=Button.clear())
