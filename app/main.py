@@ -799,10 +799,12 @@ async def change_channels(event):
 
 @bot.on(events.NewMessage(pattern="/settings"))
 async def change_settings(event):
+    print(event, "settings")
     user_id = event.message.peer_id.user_id
     await update_data_events_db(user_id, "my_settings", {"step": -1})
     await _update_current_user_step(user_id, 24)
     if not await get_user_channels_db(user_id):
+        print("tut")
         keyboard = await get_keyboard(["Начнем?"])
         await event.client.send_message(event.chat_id,
                                         "Упс..настроек еще нет 🙃\n\nА значит - пора начать! /start", buttons=keyboard)
@@ -811,8 +813,11 @@ async def change_settings(event):
         channels = set(channels)
         channels = ", ".join([f"@{channel}" for channel in channels])
         topics = await get_user_topics_db(user_id)
-        topics = await match_topics_name(topics)
-        topics = ", ".join(topics)
+        if topics:
+            topics = await match_topics_name(topics)
+            topics = ", ".join(topics)
+        else:
+            topics = None
         keywords = await get_user_keywords_db(user_id)
         keywords = ", ".join(keywords)
 

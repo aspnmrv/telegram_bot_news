@@ -247,7 +247,7 @@ async def get_code_fill_form(user_id):
         return -1
     elif not user_channels:
         return 1
-    elif user_topics == -1:
+    elif not user_topics:
         return 2
     else:
         return 0

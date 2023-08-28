@@ -118,7 +118,7 @@ async def get_user_topics_db(user_id):
     if data:
         return data[0][0]
     else:
-        return -1
+        return []
 
 
 async def update_data_topics_db(user_id, topics) -> None:
