@@ -709,6 +709,8 @@ async def get_back(event):
         await get_done(event)
     elif await is_expected_steps(user_id, [13]):
         await get_go(event)
+    elif await is_expected_steps(user_id, [9]):
+        await change_settings(event)
 
     return
 
@@ -785,23 +787,25 @@ async def change_channels(event):
         channels = set(channels)
         channels = [f"@{channel}" for channel in channels]
         channels = ", ".join(channels)
+        keyboard = await get_keyboard(["Назад"])
         text = f"Текущий список читаемых каналов: {channels} \nЧтобы выбрать новые, перешли по одному посту" \
                f" из каждого канала, который хочешь читать (не более трех каналов)" \
                f"\n\n"
 
-        await event.client.send_message(event.chat_id, text, buttons=Button.clear())
+        await event.client.send_message(event.chat_id, text, buttons=keyboard)
 
     return
 
 
 @bot.on(events.NewMessage(pattern="/settings"))
-async def change_channels(event):
+async def change_settings(event):
     user_id = event.message.peer_id.user_id
     await update_data_events_db(user_id, "my_settings", {"step": -1})
     await _update_current_user_step(user_id, 24)
     if not await get_user_channels_db(user_id):
         keyboard = await get_keyboard(["Начнем?"])
-        await event.client.send_message(event.chat_id, "Упс..настроек еще нет 🙃\n\nА значит - пора начать! /start", buttons=keyboard)
+        await event.client.send_message(event.chat_id,
+                                        "Упс..настроек еще нет 🙃\n\nА значит - пора начать! /start", buttons=keyboard)
     else:
         channels = await get_user_channels_db(user_id)
         channels = set(channels)
@@ -860,7 +864,7 @@ async def change_keywords(event):
 
 
 @bot.on(events.NewMessage(pattern="/help"))
-async def change_channels(event):
+async def get_help(event):
     user_id = event.message.peer_id.user_id
     await update_data_events_db(user_id, "help", {"step": -1})
 
