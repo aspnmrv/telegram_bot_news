@@ -22,7 +22,7 @@ from pathlib import Path
 from typing import List
 from tempfile import NamedTemporaryFile
 from app.db.db import get_stat_topics_db, get_stat_keywords_db, update_data_topics_db, get_user_channels_db, \
-    get_user_topics_db
+    get_user_topics_db, is_user_exist_db
 from langdetect import detect, detect_langs
 
 PATH = Path(__file__).parent.resolve() / "data"
@@ -242,8 +242,10 @@ async def get_code_fill_form(user_id):
     """"""
     user_channels = await get_user_channels_db(user_id)
     user_topics = await get_user_topics_db(user_id)
-
-    if not user_channels:
+    user_exist = await is_user_exist_db(user_id)
+    if not user_exist:
+        return -1
+    elif not user_channels:
         return 1
     elif user_topics == -1:
         return 2
