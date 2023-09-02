@@ -10,7 +10,7 @@ from app.tools.tools import model_predict
 
 
 async def get_state_markup(markup, user_id):
-    """"""
+    """Forming buttons and their states for the user"""
     state = list()
 
     for row in range(len(markup.rows)):
@@ -23,7 +23,7 @@ async def get_state_markup(markup, user_id):
 
 
 async def update_text_from_state_markup(markup, state, topics, name):
-    """"""
+    """Forming text for buttons depending on their state"""
     for elem in range(len(state)):
         if topics[elem] == name:
             if "✅" not in markup.rows[elem].buttons[0].text:
@@ -57,7 +57,8 @@ async def get_proposal_topics(topics, states=None):
 
 
 async def get_available_topics(messages):
-    """"""
+    """Getting labels from model predictions in a convenient format"""
+
     preds = await model_predict(messages)
 
     result = list()

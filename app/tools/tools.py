@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
 
-from io import BytesIO
+
 from telethon.tl.custom import Button
 from app.db.db_tools import _get_current_user_step
 from app.globals import TOPICS, EMOJI_TOPICS
@@ -54,8 +54,8 @@ async def union_dicts(dicts):
     return result
 
 
-async def is_expected_steps(user_id, expected_steps):
-    """"""
+async def is_expected_steps(user_id: int, expected_steps: list) -> bool:
+    """Checking if a user exists in certain steps"""
     current_step = await _get_current_user_step(user_id)
 
     if current_step in expected_steps:
@@ -65,35 +65,35 @@ async def is_expected_steps(user_id, expected_steps):
 
 
 async def get_keyboard(text_keys: list) -> list:
-    """"""
+    """Returns a keyboard object with the given values"""
     keyboard = list()
     for key in range(len(text_keys)):
         keyboard.append([Button.text(text_keys[key], resize=True)])
     return keyboard
 
 
-async def match_topics_name(topics):
-    """"""
+async def match_topics_name(topics: list) -> list:
+    """Topic name matching"""
     match_topics = list()
     for topic in topics:
         match_topics.append(TOPICS[topic])
     return match_topics
 
 
-async def unmatch_topic_name(topic):
-    """"""
+async def unmatch_topic_name(topic: str) -> str:
+    """Topic Name Reverse Matching"""
     unmatch = {v: k for k, v in TOPICS.items()}
     return unmatch[topic]
 
 
-async def remove_file(filename):
+async def remove_file(filename: str) -> None:
     """"""
     os.remove(PATH / filename)
     return
 
 
-async def get_estimate_markup(data):
-    """"""
+async def get_estimate_markup(data: str) -> list:
+    """Formation of buttons for evaluating the result"""
     markup = [
         [
             Button.inline(text="👍", data=str(data) + "-" + "1"),
@@ -105,7 +105,7 @@ async def get_estimate_markup(data):
 
 
 async def model_predict(data: List[str]):
-    """"""
+    """Request and response to a text classification model"""
     try:
         header = {
             "content-type": "application/json",
@@ -121,7 +121,7 @@ async def model_predict(data: List[str]):
 
 
 async def get_model_summary(data: List[str]):
-    """"""
+    """Request and response to a text summarization model"""
     try:
         header = {
             "content-type": "application/json; charset=utf-8",
@@ -135,7 +135,7 @@ async def get_model_summary(data: List[str]):
 
 
 async def get_bar_plot(df: pd.DataFrame, x: str, y: str, xlabel: str, ylabel: str, title: str):
-    """"""
+    """Building a bar graph for statistics"""
     sns.set_context("paper")
 
     plt.figure(figsize=(12, 10), dpi=150, frameon=False)
@@ -156,7 +156,7 @@ async def get_bar_plot(df: pd.DataFrame, x: str, y: str, xlabel: str, ylabel: st
 
 
 async def get_stat_interests():
-    """"""
+    """Formation of a graph with statistics on selected topics"""
     data = await get_stat_topics_db()
     df = pd.DataFrame(data, columns=["user_id", "topic"])
     if df.shape[0] == 0:
@@ -172,9 +172,8 @@ async def get_stat_interests():
 
 
 async def get_stat_keywords():
-    """"""
+    """Formation of a graph with statistics on selected keywords"""
     data = await get_stat_keywords_db()
-    print("data", data)
     df = pd.DataFrame(data, columns=["keyword", "users"])
 
     if df.shape[0] == 0:
@@ -186,18 +185,20 @@ async def get_stat_keywords():
 
 
 async def send_user_main_stat(event, filter_stat):
-    """"""
+    """Formation of text for sending statistics"""
+
     saved_time_topics = round(10 * filter_stat[0][0] // 60, 0)
     saved_time_keywords = round(10 * filter_stat[0][1] // 60, 0)
 
     if saved_time_topics > 0:
         text_filter_topics = f"💜 Столько времени вы сэкономили, " \
-                             f"благодаря фильтрации постов по интересам: **{saved_time_topics} минут**"
+                             f"благодаря фильтрации постов " \
+                             f"по интересам за последний месяц: **{saved_time_topics} минут**"
         await event.client.send_message(event.chat_id, text_filter_topics,
                                         buttons=Button.clear(), parse_mode="Markdown")
     if saved_time_keywords > 0:
         text_filter_keywords = f"💜 💜 А столько времени вы сэкономили, благодаря фильтрации постов по " \
-                               f"ключевым словам: **{saved_time_keywords} минут**"
+                               f"ключевым словам за последний месяц: **{saved_time_keywords} минут**"
         await event.client.send_message(event.chat_id, text_filter_keywords, buttons=Button.clear(),
                                         parse_mode="Markdown")
     return
@@ -213,7 +214,7 @@ async def send_user_file_stat(event, file, text):
 
 
 async def get_choose_topics(user_cur_states: list, user_cur_topics: list) -> list:
-    """"""
+    """Returns the selected topics and their status in formatted form"""
 
     chooses_topic = list()
 
@@ -230,7 +231,7 @@ async def get_emoji_topics(topic_name: str) -> str:
 
 
 async def is_ru_language(posts: list) -> bool:
-    """"""
+    """Returns the presence flag of the ru language"""
     result = []
     print("posts", posts)
     for text in posts:
@@ -239,7 +240,8 @@ async def is_ru_language(posts: list) -> bool:
 
 
 async def get_code_fill_form(user_id):
-    """"""
+    """Returns a specific user data availability code"""
+
     user_channels = await get_user_channels_db(user_id)
     user_topics = await get_user_topics_db(user_id)
     user_exist = await is_user_exist_db(user_id)

@@ -1,9 +1,5 @@
-import psycopg2
-import json
 import os
-import pandas.io.sql as sqlio
 import sys
-
 
 sys.path.append(os.path.dirname(__file__))
 sys.path.insert(1, os.path.realpath(os.path.pardir))
@@ -12,7 +8,11 @@ from psycopg2 import pool
 from app.globals import MINCONN, MAXCONN
 from datetime import datetime
 
+import psycopg2
+import json
 
+
+# For a stable connection to database
 def connect_from_config(file):
     keepalive_kwargs = {
         "keepalives": 1,
@@ -44,6 +44,7 @@ def reconnect():
 
 
 async def is_exist_temp_db(table_name: str, user_id: int, field: str = "user_id") -> bool:
+    """Check exist value in table"""
     conn = GLOBAL_POOL.getconn()
     cur = conn.cursor()
     query = f"""
@@ -62,6 +63,7 @@ async def is_exist_temp_db(table_name: str, user_id: int, field: str = "user_id"
 
 
 async def is_user_exist_db(user_id: int) -> bool:
+    """Check exist user_id in database"""
     conn = GLOBAL_POOL.getconn()
     cur = conn.cursor()
     query = f"""
@@ -514,7 +516,7 @@ async def get_stat_filter_db(user_id) -> None:
             sum(keywords_filter_posts) as keywords_filter_posts
         FROM public.stat_info
         WHERE user_id = {user_id}
-            and created_at::date >= (now() - interval '7 day')
+            and created_at::date >= (now() - interval '30 days')
     """
     cur.execute(query)
     data = cur.fetchall()

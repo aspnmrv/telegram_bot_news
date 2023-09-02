@@ -1,4 +1,3 @@
-print("sender")
 import sys
 import os
 
@@ -13,6 +12,7 @@ from app.news.news import News
 from app.tools.prepare_data import prepare_data, get_pred_labels, check_keywords
 from app.tools.tools import match_topics_name, get_estimate_markup, \
     unmatch_topic_name, model_predict, get_model_summary, get_emoji_topics
+from app.globals import MIN_LENGTH_POST
 from datetime import datetime
 
 
@@ -20,7 +20,6 @@ class Sender:
     def __init__(self, client, bot):
         self.client = client
         self.bot = bot
-
 
     @staticmethod
     async def generate_last_msg_users(user_last_messages: dict) -> dict:
@@ -49,9 +48,9 @@ class Sender:
             result = list()
             if messages:
                 for message in messages:
-                    if len(message.split(" ")) > 10:
+                    if len(message.split(" ")) > MIN_LENGTH_POST:
                         summary_result = await get_model_summary(message)
-                        if len(message.split(" ")) > 8:
+                        if len(message.split(" ")) > MIN_LENGTH_POST:
                             result.append(summary_result)
             channel_summary[channel] = result
         sent_messages = dict()
@@ -61,7 +60,7 @@ class Sender:
             if summary_text:
                 for text in summary_text:
                     text = text.split("\n")[0]
-                    if len(text.split(" ")) > 5:
+                    if len(text.split(" ")) > MIN_LENGTH_POST:
                         format_text += "🟣 " + text + "\n\n"
                         sent_messages[channel] = format_text
                     else:
@@ -95,7 +94,6 @@ class Sender:
             labels = await get_pred_labels(preds)
 
             if result["id"]:
-                print("if result[id]:")
                 max_post_id = max(result["id"])
                 channel_last_posts_log[channel] = max_post_id
             else:
@@ -128,7 +126,6 @@ class Sender:
         await update_stat_db(user_id, topics_filter_posts, keywords_filter_posts)
 
         if form:
-            print("if form:!!!!!!!!")
             await update_user_last_post_db(user_id, channel_last_posts_log)
         return form
 
@@ -137,7 +134,6 @@ class Sender:
         """Sending a message to a user with aggregated / summarized posts"""
 
         user_last_messages = await get_user_last_post_db(user_id)
-        print("user_last_messages", user_last_messages)
 
         if is_summary:
             form = await self.generate_format_message_to_send(user_id, user_channels,
@@ -145,7 +141,6 @@ class Sender:
             uid = uuid.uuid4()
             markup = self.bot.build_reply_markup(await get_estimate_markup(uid))
             sent_messages = await self.generate_message_to_send(form)
-            print("sent_messages", sent_messages)
             if any(sent_messages.values()):
                 sent_limit = 0
                 for channel, text in sent_messages.items():
@@ -170,7 +165,6 @@ class Sender:
             num_of_channels = len(user_channels)
             sent_limit = 0
             for channel, post_ids in form.items():
-                print("channel", channel)
                 data = dict()
                 if post_ids:
                     for post_id in post_ids:

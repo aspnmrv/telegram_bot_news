@@ -9,6 +9,7 @@ import asyncio
 
 from app.db.db import check_channel_entity_db, insert_channel_entity_db, \
     check_channel_info_db, insert_channel_info_db, insert_internal_info_db
+from app.globals import MIN_LIMIT_FIRST, MIN_LIMIT_REPEAT
 from telethon.tl.functions.messages import GetHistoryRequest
 from telethon.tl.types import InputPeerChannel
 
@@ -27,14 +28,11 @@ class News:
         """
         await asyncio.sleep(6)
         check_channel_exist = await check_channel_info_db(str(channel_id))
-        print("check_channel_exist", check_channel_exist)
         if not check_channel_exist:
             channel_info = requests.get(
                 f"https://api.telegram.org/{bot_api}/getChat?chat_id={channel_id}"
             ).json()
-            print("channel_info", channel_info)
             username_channel = channel_info["result"]["username"]
-            print("username_channel", username_channel)
             await insert_internal_info_db(1, "get_channel_info", False)
             await insert_channel_info_db(channel_id, username_channel)
         else:
@@ -117,11 +115,8 @@ class News:
     async def get_sender_posts(self, channel_id: str, channel_name: str,
                                min_id: int = 0, is_first: bool = False) -> dict:
         """Generate last N posts from channel in dictionary format"""
-
-        print("get_sender_posts")
         await asyncio.sleep(5)
         channel_entity = await self.get_channel_entity(channel_id, channel_name)
-        print("channel_entity", channel_entity)
         await insert_internal_info_db(2, "get_sender_posts", True)
         await asyncio.sleep(1)
         if not is_first:
@@ -129,7 +124,7 @@ class News:
                 GetHistoryRequest(
                     peer=channel_entity,
                     offset_id=0,
-                    limit=20,
+                    limit=MIN_LIMIT_REPEAT,
                     offset_date=None,
                     max_id=0,
                     min_id=min_id,
@@ -142,7 +137,7 @@ class News:
                 GetHistoryRequest(
                     peer=channel_entity,
                     offset_id=0,
-                    limit=30,
+                    limit=MIN_LIMIT_FIRST,
                     offset_date=None,
                     max_id=0,
                     min_id=0,

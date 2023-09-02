@@ -1,24 +1,21 @@
 import re
-import time
 import asyncio
 import logging
-
-
-
 import config
+import ssl
+
 from news.news import News
 from sender.sender import Sender
 from telethon.tl.custom import Button
 from telethon import TelegramClient, events, sync, functions
 from telethon.tl.types import InputPeerChannel
-from globals import TOPICS
+from globals import TOPICS, LIMIT_REQUESTS, MAX_LENGTH_KEYWORDS
 from tools.tools import read_data, \
-    is_expected_steps, get_keyboard, match_topics_name, remove_file, get_bar_plot, \
+    is_expected_steps, get_keyboard, match_topics_name, \
     get_stat_interests, get_stat_keywords, send_user_main_stat, send_user_file_stat, get_choose_topics, is_ru_language,\
     get_code_fill_form
 from db.db_tools import _update_current_user_step, _update_user_states, _get_user_states, \
-    _get_current_user_step, _truncate_table, _create_db
-from tools.prepare_data import prepare_data
+    _get_current_user_step, _create_db
 from topics.topics import get_state_markup, update_text_from_state_markup, build_markup, get_proposal_topics, get_available_topics
 from pathlib import Path
 from db.db import *
@@ -34,8 +31,6 @@ PASS = config.password
 login = config.login
 
 PATH = Path(__file__).parent.resolve() / "data"
-import nltk
-import ssl
 
 try:
     _create_unverified_https_context = ssl._create_unverified_context
@@ -53,6 +48,7 @@ client = TelegramClient(
     api_id,
     api_hash
 )
+
 client.connect()
 
 print(client.is_user_authorized())
@@ -92,8 +88,7 @@ async def get_news(event):
     else:
         await update_data_events_db(user_id, "news", {"step": -1})
         cnt_uses = await get_stat_use_db(user_id)
-        print("cnt_uses", cnt_uses)
-        if cnt_uses < 10:
+        if cnt_uses < LIMIT_REQUESTS:
             await event.client.send_message(event.chat_id, "Обрабатываю..Мне потребуется до 5 минут ☺️",
                                             buttons=Button.clear())
             user_topics = await get_user_topics_db(user_id)
@@ -133,8 +128,7 @@ async def get_summary(event):
     else:
         cnt_uses = await get_stat_use_db(user_id)
         await update_data_events_db(user_id, "summary", {"step": -1})
-        print("cnt_uses", cnt_uses)
-        if cnt_uses < 10:
+        if cnt_uses < LIMIT_REQUESTS:
             await event.client.send_message(event.chat_id, "Обрабатываю..Мне потребуется до 5 минут ☺️",
                                             buttons=Button.clear())
             user_topics = await get_user_topics_db(user_id)
@@ -159,7 +153,7 @@ async def start(event):
     try:
         await _get_current_user_step(event.message.peer_id.user_id)
     except:
-        print("wow")
+        pass
 
     sender_info = await event.get_sender()
     user_id = event.message.peer_id.user_id
@@ -293,7 +287,6 @@ async def wait_post(event):
 
 @bot.on(events.NewMessage(forwards=True))
 async def forwards_message(event):
-    print(event)
     user_id = event.message.peer_id.user_id
     if await is_expected_steps(user_id, [2, 9]):
         if await is_expected_steps(user_id, [9]):
@@ -305,17 +298,13 @@ async def forwards_message(event):
             current_step = await _get_current_user_step(user_id)
             try:
                 forward_channel_id = int(str("100") + str(event.message.fwd_from.from_id.channel_id)) * -1
-                print("forward_channel_id", forward_channel_id)
                 channel_info = await News.get_channel_info(forward_channel_id)
-                print("channel_info", channel_info)
                 if not channel_info:
                     await asyncio.sleep(2)
                     channel_info = await News.get_channel_info(forward_channel_id)
                     username_forward_channel = channel_info
-                    print("username_forward_channel", username_forward_channel)
                 else:
                     username_forward_channel = channel_info
-                    print("else username_forward_channel", username_forward_channel)
             except Exception as e:
                 print(e)
                 username_forward_channel = ""
@@ -488,7 +477,7 @@ async def create_keywords(event):
     if await is_expected_steps(user_id, [5]):
         print(5)
         await _update_current_user_step(user_id, 6)
-        if len(keywords) > 500:
+        if len(keywords) > MAX_LENGTH_KEYWORDS:
             await event.client.send_message(event.chat_id, "Слишком много слов, "
                                                            "давай попробуем сократить список 🌝")
             await update_data_events_db(user_id, "input_keywords", {"step": current_step, "error": "too_many"})
@@ -508,7 +497,7 @@ async def create_keywords(event):
     elif await is_expected_steps(user_id, [7]):
         await remove_from_db("user_keywords", user_id)
         await _update_current_user_step(user_id, 6)
-        if len(keywords) > 1000:
+        if len(keywords) > MAX_LENGTH_KEYWORDS:
             await event.client.send_message(event.chat_id, "Слишком много слов, давай попробуем сократить список 🌝")
             await update_data_events_db(user_id, "input_keywords", {"step": current_step, "error": "too_many"})
         else:
@@ -776,11 +765,6 @@ async def change_channels(event):
         await event.client.send_message(event.chat_id, "Кажется, у нас еще ничего не заполнено!\n\n"
                                                        "Сначала нужно выбрать набор каналов ☺️", buttons=keyboard)
         await update_data_events_db(user_id, "change_channels", {"step": -1, "error": "without channels"})
-    # elif await get_code_fill_form(user_id) == 2:
-    #     keyboard = await get_keyboard(["Добавить темы", "Не нужно"])
-    #     await _update_current_user_step(user_id, 823)
-    #     await event.client.send_message(event.chat_id, "Еще не выбраны интересы ☺️", buttons=keyboard)
-    #     await update_data_events_db(user_id, "change_channels", {"step": -1, "error": "without channels"})
     else:
         await _update_current_user_step(user_id, 9)
         channels = await get_user_channels_db(user_id)
