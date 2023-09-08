@@ -11,7 +11,7 @@ from app.db.db import *
 from app.news.news import News
 from app.tools.prepare_data import prepare_data, get_pred_labels, check_keywords
 from app.tools.tools import match_topics_name, get_estimate_markup, \
-    unmatch_topic_name, model_predict, get_model_summary, get_emoji_topics
+    unmatch_topic_name, model_predict, get_model_summary, get_emoji_topics, add_link_to_message, check_contains_url
 from app.globals import MIN_LENGTH_POST
 from datetime import datetime
 
@@ -40,18 +40,21 @@ class Sender:
 
         for channel, messages in form.items():
             channel_messages = list()
+            post_ids = list()
             for message in messages:
                 channel_messages.append(list(message.keys())[0])
-            news_bucket[channel] = channel_messages
+                post_ids.append(list(message.values())[0])
+            news_bucket[channel] = (channel_messages, post_ids)
         channel_summary = dict()
         for channel, messages in news_bucket.items():
             result = list()
-            if messages:
-                for message in messages:
-                    if len(message.split(" ")) > MIN_LENGTH_POST:
+            if messages[0]:
+                for message, post_id in zip(messages[0], messages[1]):
+                    if len(message.split(" ")) > MIN_LENGTH_POST and not await check_contains_url(message):
                         summary_result = await get_model_summary(message)
                         if len(message.split(" ")) > MIN_LENGTH_POST:
-                            result.append(summary_result)
+                            summary_result = await add_link_to_message(summary_result, channel, post_id)
+                            result.append(summary_result.replace("Germany", "Суд"))
             channel_summary[channel] = result
         sent_messages = dict()
 
@@ -79,7 +82,6 @@ class Sender:
         keywords_filter_posts = 0
 
         for channel in user_channels:
-            print("channel", channel)
             posts = list()
             channel_id = await get_channel_id_by_name_db(channel)
             news = News(self.client)
@@ -107,9 +109,10 @@ class Sender:
                     if await check_keywords(user_id, clean_messages[idx]):
                         keywords_filter_posts += 1
                     if label in user_topics and post not in [list(k.keys())[0] for k in posts] \
-                            and not await check_keywords(user_id, clean_messages[idx]):
-                        label_ru = await match_topics_name([label])
-                        posts.append({result["message"][idx]: label_ru[0]})
+                            and not await check_keywords(user_id, clean_messages[idx]) \
+                            and not await check_contains_url(clean_messages[idx]):
+                        # label_ru = await match_topics_name([label])
+                        posts.append({result["message"][idx]: post})
                 form[channel] = posts
             else:
                 is_summary = False
@@ -119,7 +122,8 @@ class Sender:
                     if await check_keywords(user_id, clean_messages[idx]):
                         keywords_filter_posts += 1
                     if label in user_topics and post not in [list(k.keys())[0] for k in posts] \
-                            and not await check_keywords(user_id, clean_messages[idx]):
+                            and not await check_keywords(user_id, clean_messages[idx]) \
+                            and not await check_contains_url(clean_messages[idx]):
                         label_ru = await match_topics_name([label])
                         posts.append({post: label_ru[0]})
                 form[channel] = posts

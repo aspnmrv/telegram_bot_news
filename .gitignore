@@ -5,6 +5,8 @@ __pycache__/
 
 # C extensions
 *.so
+*.session
+*.db
 
 # Distribution / packaging
 .Python
@@ -138,10 +140,13 @@ app/db/config.json
 data/sophie.db
 data/logs.log
 app/data/logs.log
+app/data/sophie.db
 app/config.json
 model/
 .jpg
 /session_name.session
+/session_name.session-journal
+/bot.session
 /sdf.session
 /name.session
 /bot.session

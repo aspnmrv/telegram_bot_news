@@ -75,7 +75,7 @@ class News:
             # If the entity was not yet in the database, add data about the entity
             if not check_channel_entity:
                 await insert_channel_entity_db(id, hash)
-        await asyncio.sleep(3)
+        await asyncio.sleep(2)
 
         return entity
 
@@ -115,7 +115,7 @@ class News:
     async def get_sender_posts(self, channel_id: str, channel_name: str,
                                min_id: int = 0, is_first: bool = False) -> dict:
         """Generate last N posts from channel in dictionary format"""
-        await asyncio.sleep(5)
+        await asyncio.sleep(4)
         channel_entity = await self.get_channel_entity(channel_id, channel_name)
         await insert_internal_info_db(2, "get_sender_posts", True)
         await asyncio.sleep(1)

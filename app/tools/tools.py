@@ -35,7 +35,6 @@ model_summary_path = config.model_summary_path
 async def read_data(filename):
     """"""
     with open("/data/" + filename, "rb") as f:
-        print(filename)
         data = pickle.load(f)
     return data
 
@@ -92,7 +91,7 @@ async def remove_file(filename: str) -> None:
     return
 
 
-async def get_estimate_markup(data: str) -> list:
+async def get_estimate_markup(data) -> list:
     """Formation of buttons for evaluating the result"""
     markup = [
         [
@@ -114,13 +113,13 @@ async def model_predict(data: List[str]):
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36"
         }
         result = requests.post(model_predict_path, json={"news": data}, headers=header).json()
-        await asyncio.sleep(3)
+        await asyncio.sleep(1)
         return result
     except Exception as e:
         return f"The server is not responding\n{e}"
 
 
-async def get_model_summary(data: List[str]):
+async def get_model_summary(data: str):
     """Request and response to a text summarization model"""
     try:
         header = {
@@ -128,7 +127,7 @@ async def get_model_summary(data: List[str]):
             "Connection": "keep-alive"
         }
         result = requests.post(model_summary_path, json={"text": data}, headers=header).text
-        await asyncio.sleep(2)
+        await asyncio.sleep(1)
         return result
     except Exception as e:
         return f"The server is not responding\n{e}"
@@ -233,7 +232,6 @@ async def get_emoji_topics(topic_name: str) -> str:
 async def is_ru_language(posts: list) -> bool:
     """Returns the presence flag of the ru language"""
     result = []
-    print("posts", posts)
     for text in posts:
         result.append(str(str(detect_langs(text)[0]).split(":")[0]) == "ru")
     return all(result)
@@ -253,3 +251,22 @@ async def get_code_fill_form(user_id):
         return 2
     else:
         return 0
+
+
+async def add_link_to_message(text: str, channel_name: str, post_id: int) -> str:
+    """Add link to summarization text"""
+
+    text_with_link = text.split(" ")
+    link = f"https://t.me/{channel_name}/{post_id}"
+    text_with_link[0] = f"[{text_with_link[0]}"
+    text_with_link[1] = f"{text_with_link[1]}]({link})"
+
+    return " ".join(text_with_link)
+
+
+async def check_contains_url(text: str) -> bool:
+    """"""
+    if "http" in text or "https" in text or "://" in text:
+        return True
+    else:
+        return False
