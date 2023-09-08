@@ -42,7 +42,7 @@ Some more features of the bot:
 
 Before all, clone this repository.
 
-You need to add a config with filled parameters for the telegram api:
+You need to add a config with filled parameters for the [telegram api](https://core.telegram.org/api):
 
 ```
 BOT_TOKEN: ""
@@ -61,12 +61,19 @@ MODEL_PREDICT_PATH: "http://localhost:5000/predict"
 MODEL_SUMMARY_PATH: "http://localhost:5000/summary"
 ```
 
+You must also be prepared to enter the code that you will receive from Telegram when you launch the application.
+After the first launch (using python3 main.py), files with your sessions will be automatically created, no need to enter code.
+
 ### Using Docker
 
 Simply, run the following command:
 ```
 docker-compose up --build -d
 ```
+
+### Without Docker
+
+Run main file telegram_bot_news/app/main.py => python3 main.py || nohup python3 main.py &
 
 ### Database
 
@@ -78,14 +85,84 @@ For the bot to work, you need to connect to the Postgres database by filling out
 {"dbname": "", "user": "", "password": "", "host": ""}
 ```
 
-Database structure:
+Postgres Database structure:
 
+Tables:
 
+- channels
+```
+{channel_id: character varying, username: character varying, created_at: timestamp without time zone, updated_at: timestamp without time zone}
+```
 
+- channels_entity
+  ```
+  {channel_id: character varying, access_hash: bigint, created_at: timestamp without time zone, updated_at: timestamp without time zone}
+  ```
 
-### Without Docker [NOT RECOMMENDED]
+- events
+  ```
+  {id: bigint, user_id: bigint, created_at: timestamp without time zone, event: character varying, params: json}
+  ```
 
-Run main file telegram_bot_news/app/main.py => python3 main.py || nohup python3 main.py &
+- internal_info
+  ```
+  {id: bigint, created_at: timestamp without time zone, user_id: bigint, type: integer, is_exist: boolean, func: character varying}
+  ```
+
+- messages_scores
+  ```
+  {uuid: uuid, score: smallint, created_at: timestamp without time zone}
+  ```
+
+- send_messages
+  ```
+  {id: bigint, user_id: bigint, created_at: timestamp without time zone, data: json}
+  ```
+
+- send_messages_scores
+  ```
+  {uuid: uuid, created_at: timestamp without time zone, user_id: bigint, channel: character varying, post_id: bigint, topic: character varying}
+  ```
+
+- stat_info
+  ```
+  {id: bigint, user_id: bigint, created_at: timestamp without time zone, topics_filter_posts: integer, keywords_filter_posts: integer}
+  ```
+
+- stat_uses
+  ```
+  {id: bigint, user_id: bigint, created_at: timestamp without time zone, is_summary: boolean, is_sent: boolean}
+  ```
+
+- steps
+  ```
+  {id: integer, name: character varying}
+  ```
+
+- user_channels
+  ```
+  {user_id: bigint, created_at: timestamp without time zone, channel: character varying}
+  ```
+
+- user_keywords
+  ```
+  {user_id: bigint, updated_at: timestamp without time zone, keywords: character varying[]}
+  ```
+
+- user_last_post
+  ```
+  {user_id: bigint, updated_at: timestamp without time zone, data: json}
+  ```
+
+- user_topics
+  ```
+  {user_id: bigint, updated_at: timestamp without time zone, topics: character varying[]}
+  ```
+
+- users
+  ```
+  {id: bigint, user_id: bigint, created_at: timestamp without time zone, first_name: character varying, last_name: character varying, is_bot: boolean, premium: boolean, username: character varying, lang: character varying}
+  ```
 
 ## Authors
 
