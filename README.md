@@ -44,18 +44,22 @@ Before all, clone this repository.
 
 You need to add a config with filled parameters for the telegram api:
 
+```
 BOT_TOKEN: ""
 APP_ID: 
 API_HASH: ""
 PASSWORD: ""
 LOGIN: ""
 BOT_API: ""
+```
 
 You also need to fill in the parameters for accessing the API model 
 (currently there is a classification model and a configured summarization model on a separate server and in a [separate repository](https://github.com/artemryzhkov/news_predictions)):
 
+```
 MODEL_PREDICT_PATH: "http://localhost:5000/predict"
 MODEL_SUMMARY_PATH: "http://localhost:5000/summary"
+```
 
 ### Using Docker
 
