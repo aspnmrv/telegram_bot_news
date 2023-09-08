@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
 
-
+from datetime import datetime
 from telethon.tl.custom import Button
 from app.db.db_tools import _get_current_user_step
 from app.globals import TOPICS, EMOJI_TOPICS
@@ -270,3 +270,14 @@ async def check_contains_url(text: str) -> bool:
         return True
     else:
         return False
+
+
+async def get_diff_between_ts(last_ts: str):
+    """"""
+    if last_ts:
+        current_time = datetime.now()
+        last_ts = datetime.strptime(last_ts, "%Y-%m-%d %H:%M:%S.%f")
+
+        return (current_time - last_ts).total_seconds()
+    else:
+        return 1000

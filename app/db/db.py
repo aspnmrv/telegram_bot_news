@@ -678,3 +678,21 @@ async def insert_internal_info_db(action_type, func_name, is_exist, user_id=0) -
     conn.commit()
     GLOBAL_POOL.putconn(conn)
     return None
+
+
+async def get_event_from_db(user_id, event):
+    conn = GLOBAL_POOL.getconn()
+    cur = conn.cursor()
+    query = f"""
+        SELECT
+            max(created_at) as created_at
+        FROM events
+        WHERE user_id = {user_id}
+            AND event = '{event}'
+    """
+    cur.execute(query)
+    data = cur.fetchall()
+    conn.commit()
+    GLOBAL_POOL.putconn(conn)
+
+    return data[0][0] if data else None
