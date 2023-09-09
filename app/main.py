@@ -69,6 +69,7 @@ print(client.is_user_authorized())
 
 @bot.on(events.NewMessage(pattern="/news"))
 async def get_news(event):
+    print(event)
     user_id = event.message.peer_id.user_id
     if await get_code_fill_form(user_id) == -1:
         await event.client.send_message(event.chat_id,
@@ -86,29 +87,33 @@ async def get_news(event):
         await event.client.send_message(event.chat_id, "Еще не выбраны интересы. Сделаем это прямо сейчас? ☺️", buttons=keyboard)
         await update_data_events_db(user_id, "news", {"step": -1, "error": "without channels"})
     else:
-        await update_data_events_db(user_id, "news", {"step": -1})
         last_ts_event = await get_event_from_db(user_id, "news")
-        if await get_diff_between_ts(last_ts_event) <= FLOOD_SECONDS:
+        print("last_ts_event", last_ts_event)
+        if await get_diff_between_ts(str(last_ts_event)) <= FLOOD_SECONDS:
+            print("flood")
             await event.client.send_message(event.chat_id, "Слишком частые запросы!\n\nПопробуй "
                                                            "через несколько минут 🙂", buttons=Button.clear())
             await update_data_events_db(user_id, "news", {"step": -1, "error": "flood"})
-        cnt_uses = await get_stat_use_db(user_id)
-        if cnt_uses < LIMIT_REQUESTS:
-            await event.client.send_message(event.chat_id, "Обрабатываю..Мне потребуется до 6 минут ☺️",
-                                            buttons=Button.clear())
-            user_topics = await get_user_topics_db(user_id)
-            if user_topics:
-                sender = Sender(client, bot)
-                data = await get_data_channels_db(user_id)
-                await sender.send_aggregate_news(user_id, data, user_topics, False)
+        else:
+            cnt_uses = await get_stat_use_db(user_id)
+            if cnt_uses < LIMIT_REQUESTS:
+                await event.client.send_message(event.chat_id, "Обрабатываю..Мне потребуется до 6 минут ☺️",
+                                                buttons=Button.clear())
+                await update_data_events_db(user_id, "news", {"step": -1})
+
+                user_topics = await get_user_topics_db(user_id)
+                if user_topics:
+                    sender = Sender(client, bot)
+                    data = await get_data_channels_db(user_id)
+                    await sender.send_aggregate_news(user_id, data, user_topics, False)
+                else:
+                    await event.client.send_message(event.chat_id,
+                                                    "Добавленных каналов еще нет 🙃\n\n"
+                                                    "Изменить список каналов можно "
+                                                    "по команде /channels", buttons=Button.clear())
             else:
                 await event.client.send_message(event.chat_id,
-                                                "Добавленных каналов еще нет 🙃\n\n"
-                                                "Изменить список каналов можно "
-                                                "по команде /channels", buttons=Button.clear())
-        else:
-            await event.client.send_message(event.chat_id,
-                                            "Слишком много запросов за сегодня 🤓", buttons=Button.clear())
+                                                "Слишком много запросов за сегодня 🤓", buttons=Button.clear())
     return
 
 
@@ -133,7 +138,6 @@ async def get_summary(event):
         await update_data_events_db(user_id, "summary", {"step": -1, "error": "without channels"})
     else:
         print("else")
-        await update_data_events_db(user_id, "summary", {"step": -1})
         last_ts_event = await get_event_from_db(user_id, "summary")
         print("last_ts_event", last_ts_event)
         if await get_diff_between_ts(str(last_ts_event)) <= FLOOD_SECONDS:
@@ -143,6 +147,7 @@ async def get_summary(event):
             await update_data_events_db(user_id, "summary", {"step": -1, "error": "flood"})
         else:
             print("else 2")
+            await update_data_events_db(user_id, "summary", {"step": -1})
             cnt_uses = await get_stat_use_db(user_id)
             if cnt_uses < LIMIT_REQUESTS:
                 await event.client.send_message(event.chat_id, "Обрабатываю..Мне потребуется до 6 минут ☺️",
