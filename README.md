@@ -89,17 +89,17 @@ Postgres Database structure:
 
 Tables:
 
-- channels
-```
-{channel_id: character varying, username: character varying, created_at: timestamp without time zone, updated_at: timestamp without time zone}
-```
+- channels (info about channels)
+  ```
+  {channel_id: character varying, username: character varying, created_at: timestamp without time zone, updated_at: timestamp without time zone}
+  ```
 
-- channels_entity
+- channels_entity (info with channels' entities)
   ```
   {channel_id: character varying, access_hash: bigint, created_at: timestamp without time zone, updated_at: timestamp without time zone}
   ```
 
-- events
+- events (logs events)
   ```
   {id: bigint, user_id: bigint, created_at: timestamp without time zone, event: character varying, params: json}
   ```
@@ -109,57 +109,57 @@ Tables:
   {id: bigint, created_at: timestamp without time zone, user_id: bigint, type: integer, is_exist: boolean, func: character varying}
   ```
 
-- messages_scores
+- messages_scores (scores from users)
   ```
   {uuid: uuid, score: smallint, created_at: timestamp without time zone}
   ```
 
-- send_messages
+- send_messages (logs sent messages)
   ```
   {id: bigint, user_id: bigint, created_at: timestamp without time zone, data: json}
   ```
 
-- send_messages_scores
+- send_messages_scores (scores sent messages)
   ```
   {uuid: uuid, created_at: timestamp without time zone, user_id: bigint, channel: character varying, post_id: bigint, topic: character varying}
   ```
 
-- stat_info
+- stat_info (info for stats)
   ```
   {id: bigint, user_id: bigint, created_at: timestamp without time zone, topics_filter_posts: integer, keywords_filter_posts: integer}
   ```
 
-- stat_uses
+- stat_uses (number of times users use filtering modes)
   ```
   {id: bigint, user_id: bigint, created_at: timestamp without time zone, is_summary: boolean, is_sent: boolean}
   ```
 
-- steps
+- steps (names of steps)
   ```
   {id: integer, name: character varying}
   ```
 
-- user_channels
+- user_channels (channels of users)
   ```
   {user_id: bigint, created_at: timestamp without time zone, channel: character varying}
   ```
 
-- user_keywords
+- user_keywords (keywords of users)
   ```
   {user_id: bigint, updated_at: timestamp without time zone, keywords: character varying[]}
   ```
 
-- user_last_post
+- user_last_post (logs with last posts for channles of users)
   ```
   {user_id: bigint, updated_at: timestamp without time zone, data: json}
   ```
 
-- user_topics
+- user_topics (topics of users)
   ```
   {user_id: bigint, updated_at: timestamp without time zone, topics: character varying[]}
   ```
 
-- users
+- users (info about users)
   ```
   {id: bigint, user_id: bigint, created_at: timestamp without time zone, first_name: character varying, last_name: character varying, is_bot: boolean, premium: boolean, username: character varying, lang: character varying}
   ```
