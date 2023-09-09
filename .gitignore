@@ -8,6 +8,7 @@ __pycache__/
 *.session
 *.db
 *.json
+.*out
 
 # Distribution / packaging
 .Python
@@ -137,6 +138,7 @@ dmypy.json
 # Custom
 config/config.yml
 config/config.env
+nohup.out
 db/config.json
 data/sophie.db
 data/logs.log
