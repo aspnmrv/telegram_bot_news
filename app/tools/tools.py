@@ -272,10 +272,10 @@ async def check_contains_url(text: str) -> bool:
         return False
 
 
-async def get_diff_between_ts(last_ts: str):
+async def get_diff_between_ts(last_ts):
     """"""
     print("kkkkk", last_ts)
-    if last_ts:
+    if last_ts is not None:
         current_time = datetime.now()
         last_ts = datetime.strptime(last_ts, "%Y-%m-%d %H:%M:%S.%f")
         print("lasts", last_ts)
