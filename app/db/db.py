@@ -696,3 +696,53 @@ async def get_event_from_db(user_id, event):
     GLOBAL_POOL.putconn(conn)
 
     return data[0][0] if data else None
+
+
+async def get_user_for_notify_db():
+    """"""
+    conn = GLOBAL_POOL.getconn()
+    cur = conn.cursor()
+    query = f"""
+        SELECT
+            array_agg(id)
+        FROM public.users
+        WHERE id in (1167990839, 288939647, 123480322, 85544995, 267560138, 1233172454, 1193478)
+    """
+    cur.execute(query)
+    data = cur.fetchall()
+    GLOBAL_POOL.putconn(conn)
+    if data:
+        return data[0][0]
+    else:
+        return None
+
+
+async def update_chats_db(user_id, chat_id):
+    """"""
+    conn = GLOBAL_POOL.getconn()
+    cur = conn.cursor()
+    created_at = datetime.now()
+    query = f"""
+        SELECT
+            user_id
+        FROM public.users_chats
+        WHERE user_id = {user_id}
+    """
+    cur.execute(query)
+    df = cur.fetchall()
+    if df:
+        query = f"""
+             UPDATE public.users_chats
+             SET chat_id = {created_at},
+             updated_at = '{created_at}'
+             WHERE user_id = {user_id}
+         """
+    else:
+        query = f"""
+            INSERT INTO public.users_chats (user_id, updated_at, chat_id)
+            VALUES ({user_id}, '{created_at}', {chat_id})
+        """
+    cur.execute(query)
+    conn.commit()
+    GLOBAL_POOL.putconn(conn)
+    return None

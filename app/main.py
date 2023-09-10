@@ -119,7 +119,6 @@ async def get_news(event):
 
 @bot.on(events.NewMessage(pattern="/summary"))
 async def get_summary(event):
-    print(event)
     user_id = event.message.peer_id.user_id
     if await get_code_fill_form(user_id) == -1:
         await event.client.send_message(event.chat_id,
@@ -137,16 +136,12 @@ async def get_summary(event):
         await event.client.send_message(event.chat_id, "Еще не выбраны интересы. Сделаем это прямо сейчас? ☺️", buttons=keyboard)
         await update_data_events_db(user_id, "summary", {"step": -1, "error": "without channels"})
     else:
-        print("else")
         last_ts_event = await get_event_from_db(user_id, "summary")
-        print("last_ts_event", last_ts_event)
         if await get_diff_between_ts(str(last_ts_event)) <= FLOOD_SECONDS:
-            print("get_diff_between_ts")
             await event.client.send_message(event.chat_id, "Слишком частые запросы!\n\nПопробуй "
                                                            "через несколько минут 🙂", buttons=Button.clear())
             await update_data_events_db(user_id, "summary", {"step": -1, "error": "flood"})
         else:
-            print("else 2")
             await update_data_events_db(user_id, "summary", {"step": -1})
             cnt_uses = await get_stat_use_db(user_id)
             if cnt_uses < LIMIT_REQUESTS:
@@ -177,11 +172,12 @@ async def start(event):
         pass
 
     sender_info = await event.get_sender()
+
     user_id = event.message.peer_id.user_id
     if not await is_user_exist_db(user_id):
         await update_data_users_db(sender_info)
+    # await update_chats_db(user_id, event.chat_id)
     await _update_current_user_step(user_id, 1)
-
     keyboard = await get_keyboard(["Начать 🚀", "Обо мне"])
     text = """Привет! 👋\n\nЯ могу помочь фильтровать новостные посты из твоих любимых каналов. \nЗаполним список каналов, выберем интересы 📝\n\nНачнем?"""
     await event.client.send_message(event.chat_id, text, buttons=keyboard)
@@ -607,6 +603,31 @@ async def get_accept(event):
                "Также можно посмотреть интересную статистику по команде /stat 📊\n\n"
         await event.client.send_message(event.chat_id, text, buttons=keyboard)
         await update_data_events_db(user_id, "is_success", {"step": current_step})
+    else:
+        pass
+
+    return
+
+
+@bot.on(events.NewMessage(pattern="/fiton"))
+async def get_fiton(event):
+    """"""
+    user_id = event.message.peer_id.user_id
+
+    if user_id == 1233172454:
+        chats = await get_user_for_notify_db()
+
+        if chats:
+            text = "Псс..Я заметил, что ты уже заполнил " \
+                   "настройки, но еще не запускал фильтрацию новостей! 😼\n\n" \
+                   "Напомню, чтобы запустить выгрузку новостей, можно воспользоваться в меню командами:\n\n" \
+                   "/summary - для выгрузки с краткими выдержками по твоим интересам и каналам\n" \
+                   "/news - для выгрузки с репостами из выбранных каналов\n\n💜"
+            for chat in chats:
+                await event.client.send_message(chat, text, buttons=Button.clear())
+                await update_data_events_db(user_id, "send_notify", {"step": -1, "data": chats})
+        else:
+            pass
     else:
         pass
 
