@@ -140,9 +140,12 @@ dmypy.json
 
 # Custom
 /config/config.yml
-config/config.env
+config/config.yml
 nohup.out
 app/db/config.json
+/app/db/config.json
+app/data/sophie.db
+app/data/logs.log
 /config.json
 db/config.json
 data/sophie.db
