@@ -22,7 +22,6 @@ def connect_from_config(file):
     }
     with open(file, 'r') as fp:
         config = json.load(fp)
-        print("config", config)
     return psycopg2.connect(**config, **keepalive_kwargs)
 
 

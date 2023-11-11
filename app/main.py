@@ -57,9 +57,7 @@ if not client.is_user_authorized():
     try:
         client.sign_in(password=PASS)
     except:
-        print("Error")
         client.send_code_request(phone=login, force_sms=False)
-        print(client)
         try:
             client.sign_in(login, input("Enter code: "))
         except:
@@ -69,7 +67,6 @@ print(client.is_user_authorized())
 
 @bot.on(events.NewMessage(pattern="/news"))
 async def get_news(event):
-    print(event)
     user_id = event.message.peer_id.user_id
     if await get_code_fill_form(user_id) == -1:
         await event.client.send_message(event.chat_id,
@@ -88,7 +85,6 @@ async def get_news(event):
         await update_data_events_db(user_id, "news", {"step": -1, "error": "without channels"})
     else:
         last_ts_event = await get_event_from_db(user_id, "news")
-        print("last_ts_event", last_ts_event)
         if last_ts_event is None or await get_diff_between_ts(str(last_ts_event)) > FLOOD_SECONDS:
             cnt_uses = await get_stat_use_db(user_id)
             if cnt_uses < LIMIT_REQUESTS:
@@ -104,7 +100,6 @@ async def get_news(event):
                 await event.client.send_message(event.chat_id,
                                                 "Слишком много запросов за сегодня 🤓", buttons=Button.clear())
         else:
-            print("flood")
             await event.client.send_message(event.chat_id, "Слишком частые запросы!\n\nПопробуй "
                                                            "через несколько минут 🙂", buttons=Button.clear())
             await update_data_events_db(user_id, "news", {"step": -1, "error": "flood"})
@@ -113,32 +108,25 @@ async def get_news(event):
 
 @bot.on(events.NewMessage(pattern="/summary"))
 async def get_summary(event):
-    print(event)
     user_id = event.message.peer_id.user_id
     if await get_code_fill_form(user_id) == -1:
-        print("-1")
         await event.client.send_message(event.chat_id,
                                         "Еще не выбраны настройки 🙃\n\nНажимай на /start", buttons=Button.clear())
         await update_data_events_db(user_id, "summary", {"step": -1, "error": "without users"})
     elif await get_code_fill_form(user_id) == 1:
-        print("1")
         keyboard = await get_keyboard(["Добавить каналы", "Не нужно"])
         await _update_current_user_step(user_id, 824)
         await event.client.send_message(event.chat_id, "Кажется, у нас еще ничего не заполнено!\n\n"
                                                        "Сначала нужно выбрать набор каналов ☺️", buttons=keyboard)
         await update_data_events_db(user_id, "summary", {"step": -1, "error": "without channels"})
     elif await get_code_fill_form(user_id) == 2:
-        print("2")
         keyboard = await get_keyboard(["Добавить темы", "Не нужно"])
         await _update_current_user_step(user_id, 823)
         await event.client.send_message(event.chat_id, "Еще не выбраны интересы. Сделаем это прямо сейчас? ☺️", buttons=keyboard)
         await update_data_events_db(user_id, "summary", {"step": -1, "error": "without channels"})
     else:
-        print("else")
         last_ts_event = await get_event_from_db(user_id, "summary")
-        print("last_ts_event", last_ts_event)
         if last_ts_event is None or await get_diff_between_ts(str(last_ts_event)) > FLOOD_SECONDS:
-            print("if")
             await update_data_events_db(user_id, "summary", {"step": -1})
             cnt_uses = await get_stat_use_db(user_id)
             if cnt_uses < LIMIT_REQUESTS:
@@ -147,7 +135,6 @@ async def get_summary(event):
                 sender = Sender(client, bot)
                 data = await get_data_channels_db(user_id)
                 user_topics = await get_user_topics_db(user_id)
-                print("data", data)
                 await sender.send_aggregate_news(user_id, data, user_topics, True)
             else:
                 await event.client.send_message(event.chat_id,
@@ -172,7 +159,6 @@ async def start(event):
     user_id = event.message.peer_id.user_id
     if not await is_user_exist_db(user_id):
         await update_data_users_db(sender_info)
-    # await update_chats_db(user_id, event.chat_id)
     await _update_current_user_step(user_id, 1)
     keyboard = await get_keyboard(["Начать 🚀", "Обо мне"])
     text = """Привет! 👋\n\nЯ могу помочь фильтровать новостные посты из твоих любимых каналов. \nЗаполним список каналов, выберем интересы 📝\n\nНачнем?"""

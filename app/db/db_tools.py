@@ -120,7 +120,6 @@ async def _get_current_user_step(user_id):
     """
     cur.execute(query)
     data = cur.fetchall()
-    print(data)
     CONN.commit()
 
     return int(data[0][0])

@@ -5,7 +5,6 @@ sys.path.append(os.path.dirname(__file__))
 sys.path.insert(1, os.path.realpath(os.path.pardir))
 
 import uuid
-import re
 
 from app.db.db import *
 from app.news.news import News
