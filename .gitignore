@@ -111,6 +111,9 @@ celerybeat.pid
 # Environments
 .env
 .venv
+.json
+.yml
+.db
 env/
 venv/
 ENV/
@@ -136,16 +139,12 @@ dmypy.json
 .pyre/
 
 # Custom
-config/config.yml
 /config/config.yml
 config/config.env
 nohup.out
-#/db/config.json
-#/app/db/config.json
-#/config.json
-db/config.json
 app/db/config.json
-config.json
+/config.json
+db/config.json
 data/sophie.db
 data/logs.log
 app/data/logs.log
