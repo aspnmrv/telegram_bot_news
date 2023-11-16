@@ -58,7 +58,7 @@ You also need to fill in the parameters for accessing the API model
 
 ```
 MODEL_PREDICT_PATH: "http://localhost:5000/predict"
-MODEL_SUMMARY_PATH: "http://localhost:5000/summary"
+MODEL_SUMMARY_PATH: "http://localhost:5000//summary_v2"
 ```
 
 You must also be prepared to enter the code that you will receive from Telegram when you launch the application.
